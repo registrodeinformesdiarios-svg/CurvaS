@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Cronograma y Curva S</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+
+    <div class="max-w-6xl mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-indigo-700">Cronograma y Curva S Profesional</h1>
+            <p class="text-slate-500 mt-2">Pega tus datos en formato TXT para generar el análisis automático</p>
+            <div id="currentDateDisplay" class="mt-2 font-semibold text-slate-700 text-sm"></div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- Input Section -->
+            <div class="lg:col-span-1 space-y-4">
+                <div class="glass-panel p-6 rounded-2xl shadow-sm">
+                    <label class="block text-sm font-semibold mb-2">Entrada de Datos (Formato TXT)</label>
+                    <textarea id="dataInput" class="w-full h-80 p-4 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none" placeholder="<Tarea 1>
+<<Tarea hija 1>>(1.1)(2026-03-25)(2026-03-26)()(50%)"></textarea>
+                    
+                    <button onclick="processData()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Generar Análisis
+                    </button>
+                    
+                    <div class="mt-6 text-xs text-slate-400 leading-relaxed">
+                        <strong>Nota:</strong> El sistema calculará el avance planificado comparando la fecha actual con el rango de fechas de cada tarea.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visualization Section -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Chart Card -->
+                <div class="glass-panel p-6 rounded-2xl shadow-sm h-[400px]">
+                    <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-indigo-500 rounded-full"></span>
+                        Curva S de Avance
+                    </h2>
+                    <canvas id="sCurveChart"></canvas>
+                </div>
+
+                <!-- Schedule Table Card -->
+                <div class="glass-panel p-6 rounded-2xl shadow-sm overflow-hidden">
+                    <h2 class="text-lg font-bold mb-4">Detalle del Cronograma</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-100 border-b">
+                                <tr>
+                                    <th class="px-4 py-3 font-semibold">Tarea</th>
+                                    <th class="px-4 py-3 font-semibold">ID</th>
+                                    <th class="px-4 py-3 font-semibold">Inicio</th>
+                                    <th class="px-4 py-3 font-semibold">Fin</th>
+                                    <th class="px-4 py-3 font-semibold">Avance Real</th>
+                                    <th class="px-4 py-3 font-semibold">Avance Plan.</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleTableBody" class="divide-y">
+                                <tr>
+                                    <td colspan="6" class="px-4 py-10 text-center text-slate-400 italic">No hay datos procesados</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal (Custom) -->
+    <div id="alertBox" class="fixed top-4 right-4 max-w-sm w-full bg-red-600 text-white p-4 rounded-xl shadow-2xl hidden transform translate-y-0 transition-all duration-300">
+        <div class="flex items-center gap-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p id="alertMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        let myChart = null;
+        const now = new Date();
+        document.getElementById('currentDateDisplay').innerText = `Fecha de Análisis: ${now.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`;
+
+        // Datos de ejemplo iniciales
+        const demoData = `<Tarea 1>
+<<Tarea hija 1>>(1.1)(2026-03-25)(2026-04-10)()(50%)
+
+<Tarea 2>
+<<Tarea hija 1>>(2.1)(2026-03-27)(2026-04-15)(1.1)(20%)
+
+<Tarea 3>
+<<Tarea hija 1>>(3.1)(2026-04-02)(2026-04-23)(1.1, 2.1)(0%)
+<<Tarea hija 2>>(3.2)(2026-04-10)(2026-05-15)(1.1, 2.1)(0%)`;
+
+        document.getElementById('dataInput').value = demoData;
+
+        function showAlert(msg) {
+            const box = document.getElementById('alertBox');
+            document.getElementById('alertMessage').innerText = msg;
+            box.classList.remove('hidden');
+            setTimeout(() => box.classList.add('hidden'), 5000);
+        }
+
+        function parseData(text) {
+            const tasks = [];
+            let currentParent = "Sin categoría";
+            const lines = text.split('\n');
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                // Capturar tarea principal <Nombre>
+                const parentMatch = line.match(/^<([^<].*?)>$/);
+                if (parentMatch) {
+                    currentParent = parentMatch[1];
+                    return;
+                }
+
+                // Capturar tarea hija <<Nombre>>(ID)(Ini)(Fin)(Pred)(Avance)
+                const childMatch = line.match(/^<<(.+?)>>\((.*?)\)\((.*?)\)\((.*?)\)\((.*?)\)\((.*?)\)$/);
+                if (childMatch) {
+                    const start = new Date(childMatch[3]);
+                    const end = new Date(childMatch[4]);
+                    
+                    // Cálculo de avance planificado basado en la fecha actual
+                    let plannedProgress = 0;
+                    if (now > end) {
+                        plannedProgress = 100;
+                    } else if (now < start) {
+                        plannedProgress = 0;
+                    } else {
+                        const totalDuration = end - start;
+                        const elapsed = now - start;
+                        plannedProgress = Math.round((elapsed / totalDuration) * 100);
+                    }
+
+                    tasks.push({
+                        parent: currentParent,
+                        name: childMatch[1],
+                        id: childMatch[2],
+                        start: start,
+                        end: end,
+                        predecessors: childMatch[5],
+                        actualProgress: parseFloat(childMatch[6].replace('%', '')) || 0,
+                        plannedProgress: plannedProgress
+                    });
+                }
+            });
+            return tasks;
+        }
+
+        function processData() {
+            const text = document.getElementById('dataInput').value;
+            const tasks = parseData(text);
+
+            if (tasks.length === 0) {
+                showAlert("No se encontraron tareas con el formato correcto.");
+                return;
+            }
+
+            renderTable(tasks);
+            renderChart(tasks);
+        }
+
+        function renderTable(tasks) {
+            const tbody = document.getElementById('scheduleTableBody');
+            tbody.innerHTML = '';
+
+            tasks.forEach(task => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-slate-50 transition-colors";
+                row.innerHTML = `
+                    <td class="px-4 py-3">
+                        <span class="text-[10px] uppercase font-bold text-indigo-400 block">${task.parent}</span>
+                        <span class="font-medium">${task.name}</span>
+                    </td>
+                    <td class="px-4 py-3 text-slate-500 font-mono">${task.id}</td>
+                    <td class="px-4 py-3 text-xs">${task.start.toISOString().split('T')[0]}</td>
+                    <td class="px-4 py-3 text-xs">${task.end.toISOString().split('T')[0]}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500" style="width: ${task.actualProgress}%"></div>
+                            </div>
+                            <span class="text-xs font-bold">${task.actualProgress}%</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2 text-slate-500">
+                             <div class="flex-1 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-indigo-400" style="width: ${task.plannedProgress}%"></div>
+                            </div>
+                            <span class="text-xs font-bold">${task.plannedProgress}%</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderChart(tasks) {
+            // Generar puntos de la curva S
+            // Encontrando el rango total de fechas
+            let minDate = new Date(Math.min(...tasks.map(t => t.start)));
+            let maxDate = new Date(Math.max(...tasks.map(t => t.end)));
+            
+            // Creamos 10 puntos de control temporales
+            const labels = [];
+            const plannedValues = [];
+            const actualValues = [];
+            
+            const step = (maxDate - minDate) / 10;
+
+            for (let i = 0; i <= 10; i++) {
+                const checkpoint = new Date(minDate.getTime() + (step * i));
+                labels.push(checkpoint.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' }));
+                
+                let totalPlannedAtTime = 0;
+                let totalActualAtTime = 0;
+
+                tasks.forEach(task => {
+                    // Planificado acumulado en este punto del tiempo
+                    if (checkpoint > task.end) {
+                        totalPlannedAtTime += 100;
+                    } else if (checkpoint < task.start) {
+                        totalPlannedAtTime += 0;
+                    } else {
+                        const dur = task.end - task.start;
+                        const elap = checkpoint - task.start;
+                        totalPlannedAtTime += (elap / dur) * 100;
+                    }
+
+                    // Para el Real, como el TXT solo da el valor "actual", 
+                    // asumimos que el valor actual se mantiene desde el inicio de la obra hasta hoy.
+                    // En una curva S real, esto vendría de un histórico, pero aquí interpolamos linealmente el progreso actual sobre el tiempo transcurrido.
+                    if (checkpoint >= now) {
+                        // Después de hoy, proyectamos el avance real actual
+                        totalActualAtTime += task.actualProgress;
+                    } else {
+                        // Antes de hoy, escalamos el avance real según el tiempo transcurrido relativo a la fecha actual
+                        const elapsedSinceStart = now - task.start;
+                        if (elapsedSinceStart > 0) {
+                            const ratio = Math.min(1, (checkpoint - task.start) / elapsedSinceStart);
+                            totalActualAtTime += Math.max(0, task.actualProgress * ratio);
+                        }
+                    }
+                });
+
+                plannedValues.push(totalPlannedAtTime / tasks.length);
+                actualValues.push(totalActualAtTime / tasks.length);
+            }
+
+            if (myChart) myChart.destroy();
+
+            const ctx = document.getElementById('sCurveChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Curva Planificada (Programado)',
+                            data: plannedValues,
+                            borderColor: '#818cf8',
+                            backgroundColor: 'rgba(129, 140, 248, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 4
+                        },
+                        {
+                            label: 'Curva Real (Ejecutado)',
+                            data: actualValues,
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            pointRadius: 5
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: { display: true, text: 'Porcentaje de Avance (%)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Ejecutar al cargar
+        window.onload = processData;
+    </script>
+</body>
+</html>
