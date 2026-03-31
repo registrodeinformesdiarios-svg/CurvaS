@@ -36,6 +36,21 @@
             display: inline-block;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Drag and Drop Styles */
+        .drag-handle {
+            cursor: grab;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+        .drag-handle:active { cursor: grabbing; }
+        tr.dragging {
+            opacity: 0.5;
+            background-color: #eff6ff !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen p-4 md:p-8">
@@ -93,6 +108,10 @@
                 </button>
 
                 <div class="flex gap-2">
+                    <button onclick="openGanttWindow()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/><line x1="7" y1="17" x2="12" y2="17"/></svg>
+                        Ver Gantt
+                    </button>
                     <button onclick="generateReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         PDF
@@ -138,7 +157,23 @@
 
             <!-- Schedule Table Section -->
             <div id="section-table" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 overflow-hidden page-break">
-                <h2 class="text-xl font-bold text-gray-800 mb-4">Cronograma de Actividades</h2>
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <h2 class="text-xl font-bold text-gray-800">Cronograma de Actividades</h2>
+                    <div class="flex gap-2 no-print">
+                        <button onclick="addNewGroup()" class="text-xs bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Agregar Grupo
+                        </button>
+                        <button onclick="setAllGroupsVisibility(false)" class="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                            Plegar Todo
+                        </button>
+                        <button onclick="setAllGroupsVisibility(true)" class="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-3 py-1.5 rounded-lg font-semibold transition flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            Desplegar Todo
+                        </button>
+                    </div>
+                </div>
                 <div id="ganttEditor" class="overflow-x-auto border rounded-lg">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-gray-50">
@@ -173,6 +208,8 @@
     <script>
         const GD_API_URL = 'https://script.google.com/macros/s/AKfycbzzCEA1mr_hNDRAX1irmR6cTO9XwInntFaxxWuOEfyd3SGNvOGL4pItMsnnaSG2_Oox/exec';
 
+        let rawTxtContent = null; // Guarda el texto del último TXT cargado
+
         let projectData = {
             nombreProyecto: "Proyecto sin título",
             fechasCorte: [],
@@ -185,15 +222,13 @@
         let pendingProgress = {}; 
         let activeChart = null;
         let activeTaskRef = null;
+        let draggedGroupIndex = null;
 
         document.getElementById('customSnapshotDate').value = projectData.fechaActual;
         document.getElementById('fileInput').addEventListener('change', handleFile);
 
         window.onload = refreshDriveList;
 
-        /**
-         * Genera un prefijo de fecha dinámico YYYYMMDD
-         */
         function getDynamicDatePrefix() {
             const today = new Date();
             const year = today.getFullYear();
@@ -202,9 +237,6 @@
             return `${year}${month}${day}`;
         }
 
-        /**
-         * Genera el nombre del archivo con el formato solicitado
-         */
         function getFormattedFileName(ext) {
             const prefix = getDynamicDatePrefix();
             const projectName = projectData.nombreProyecto.trim().replace(/\s+/g, ' ');
@@ -264,19 +296,14 @@
             const originalText = btn.innerHTML;
             btn.disabled = true;
             btn.innerHTML = '<div class="loading-spinner"></div> Subiendo...';
-
             const content = generateTxtString();
             const fileName = getFormattedFileName('txt');
-
             try {
                 const response = await fetch(GD_API_URL, {
                     method: 'POST',
                     mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name: fileName,
-                        content: content
-                    })
+                    body: JSON.stringify({ name: fileName, content: content })
                 });
                 showStatus(`Petición enviada: ${fileName}`);
                 setTimeout(refreshDriveList, 2000); 
@@ -294,7 +321,8 @@
             if (!file) return;
             const reader = new FileReader();
             reader.onload = (event) => {
-                parseTxt(event.target.result);
+                rawTxtContent = event.target.result;
+                parseTxt(rawTxtContent);
                 calculateProjectBoundaries();
                 setDefaultFilters();
                 renderAll();
@@ -308,46 +336,32 @@
             projectData.fechasCorte = [];
             projectData.grupos = [];
             projectData.graficoConfig = { fi: null, ff: null };
-            
-            let currentGroup = null, currentTask = null;
-            let inGraficoBlock = false;
-            let inProyectoBlock = false;
-
+            let currentGroup = null, currentTask = null, inGraficoBlock = false, inProyectoBlock = false;
             for (let i = 0; i < lines.length; i++) {
                 const trimmed = lines[i].trim();
                 if (!trimmed) continue;
-
                 if (trimmed === '*Proyecto*') { inProyectoBlock = true; continue; }
-                if (inProyectoBlock) {
-                    projectData.nombreProyecto = trimmed;
-                    inProyectoBlock = false;
-                    continue;
-                }
-
+                if (inProyectoBlock) { projectData.nombreProyecto = trimmed; inProyectoBlock = false; continue; }
                 if (trimmed === '*Grafico*') { inGraficoBlock = true; continue; }
                 if (inGraficoBlock) {
                     if (trimmed.startsWith('FI:')) projectData.graficoConfig.fi = trimmed.replace('FI:', '').trim();
                     if (trimmed.startsWith('FF:')) projectData.graficoConfig.ff = trimmed.replace('FF:', '').trim();
                     if (!trimmed.includes(':')) inGraficoBlock = false; 
                 }
-
                 const dateMatch = trimmed.match(/^#(.*)#$/);
                 if (dateMatch) { projectData.fechasCorte.push(dateMatch[1]); continue; }
-                
                 const groupMatch = trimmed.match(/^<([^<].*)>$/);
                 if (groupMatch) {
                     currentGroup = { nombre: groupMatch[1], tareas: [], visible: true };
                     projectData.grupos.push(currentGroup);
                     continue;
                 }
-                
                 const taskMatch = trimmed.match(/^<<(.+)>>\((.*)\)\((.*)\)\((.*)\)\((.*)\)$/);
                 if (taskMatch) {
                     currentTask = { nombre: taskMatch[1], id: taskMatch[2], inicio: taskMatch[3], fin: taskMatch[4], predecesoras: taskMatch[5], avances: [] };
                     currentGroup.tareas.push(currentTask);
                     continue;
                 }
-                
                 const progressMatch = trimmed.match(/^\((\d+)%\)$/);
                 if (progressMatch && currentTask) currentTask.avances.push(parseInt(progressMatch[1]));
             }
@@ -374,12 +388,10 @@
         function makeProjectNameEditable(element) {
             const oldValue = projectData.nombreProyecto;
             const input = document.createElement('input');
-            input.type = 'text';
-            input.value = oldValue;
+            input.type = 'text'; input.value = oldValue;
             input.className = "text-lg font-medium text-blue-600 italic border rounded px-2 w-full max-w-md outline-none focus:ring-2 focus:ring-blue-500";
             element.replaceWith(input);
-            input.focus();
-            input.select();
+            input.focus(); input.select();
             const save = () => {
                 const newValue = input.value.trim() || "Proyecto sin título";
                 projectData.nombreProyecto = newValue;
@@ -409,6 +421,53 @@
 
         function toggleGroup(i) { projectData.grupos[i].visible = !projectData.grupos[i].visible; renderTable(); }
 
+        function setAllGroupsVisibility(isVisible) {
+            projectData.grupos.forEach(g => g.visible = isVisible);
+            renderTable();
+        }
+
+        function addNewGroup() {
+            const nuevoNombre = "Nuevo Grupo";
+            projectData.grupos.push({ nombre: nuevoNombre, tareas: [], visible: true });
+            renderTable();
+        }
+
+        function deleteGroup(gIdx, e) {
+            if (e) e.stopPropagation();
+            const groupName = projectData.grupos[gIdx].nombre;
+            if(confirm(`¿Estás seguro de eliminar el grupo "${groupName}" y todas sus tareas permanentemente?`)) {
+                // Eliminación correcta del array
+                projectData.grupos.splice(gIdx, 1);
+                // Limpiar posibles estados pendientes asociados a este grupo
+                pendingProgress = {};
+                calculateProjectBoundaries();
+                renderAll();
+                showStatus(`Grupo "${groupName}" eliminado.`);
+            }
+        }
+
+        function makeGroupEditable(element, gIdx) {
+            const oldValue = projectData.grupos[gIdx].nombre;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = oldValue;
+            input.className = "w-full border rounded px-1 text-gray-800 font-bold";
+            element.innerHTML = '';
+            element.appendChild(input);
+            input.focus();
+            const save = () => {
+                const newValue = input.value.trim();
+                if(newValue) {
+                    projectData.grupos[gIdx].nombre = newValue;
+                    renderTable();
+                } else {
+                    renderTable();
+                }
+            };
+            input.onblur = save;
+            input.onkeydown = (e) => { if(e.key === 'Enter') save(); };
+        }
+
         function addTaskToGroup(gIdx, e) {
             e.stopPropagation();
             const newTask = { nombre: "Nueva Tarea", id: "0.0", inicio: projectData.fechaActual, fin: projectData.fechaActual, predecesoras: "", avances: projectData.fechasCorte.map(() => 0) };
@@ -429,6 +488,38 @@
             if (targetIdx < 0 || targetIdx >= tareas.length) return;
             [tareas[tIdx], tareas[targetIdx]] = [tareas[targetIdx], tareas[tIdx]];
             renderAll();
+        }
+
+        // --- Drag and Drop Logic para Grupos ---
+        function handleDragStart(e, index) {
+            draggedGroupIndex = index;
+            e.target.closest('tr').classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            if (draggedGroupIndex !== null && draggedGroupIndex !== targetIndex) {
+                const movedGroup = projectData.grupos.splice(draggedGroupIndex, 1)[0];
+                projectData.grupos.splice(targetIndex, 0, movedGroup);
+                renderAll();
+            }
+            draggedGroupIndex = null;
+        }
+
+        function handleDragEnd(e) {
+            const tr = e.target.closest('tr');
+            if (tr) tr.classList.remove('dragging');
+        }
+
+        function updateProgressState(key, value) {
+            pendingProgress[key] = parseInt(value) || 0;
+            renderTable(); 
         }
 
         function makeEditable(element, gIdx, tIdx, field) {
@@ -459,17 +550,75 @@
             const tbody = document.getElementById('taskTableBody');
             tbody.innerHTML = '';
             projectData.grupos.forEach((grupo, gIdx) => {
+                let groupStart = null, groupEnd = null, groupAvance = 0;
+                if (grupo.tareas.length > 0) {
+                    let totalAvance = 0;
+                    grupo.tareas.forEach((t, innerTIdx) => {
+                        if (!groupStart || t.inicio < groupStart) groupStart = t.inicio;
+                        if (!groupEnd || t.fin > groupEnd) groupEnd = t.fin;
+                        const key = `${gIdx}-${innerTIdx}`;
+                        const val = pendingProgress[key] !== undefined ? pendingProgress[key] : (t.avances.length > 0 ? t.avances[t.avances.length-1] : 0);
+                        totalAvance += val;
+                    });
+                    groupAvance = Math.round(totalAvance / grupo.tareas.length);
+                } else {
+                    groupStart = "-"; groupEnd = "-"; groupAvance = 0;
+                }
+
                 const groupRow = document.createElement('tr');
-                groupRow.className = "bg-gray-100 font-bold cursor-pointer hover:bg-gray-200 transition-colors";
-                groupRow.innerHTML = `<td class="p-3 border-b" colspan="5" onclick="toggleGroup(${gIdx})"><span class="mr-2 no-print">${grupo.visible ? '▼' : '▶'}</span>${grupo.nombre}</td><td class="p-3 border-b text-center no-print"><button onclick="addTaskToGroup(${gIdx}, event)" class="bg-blue-500 hover:bg-blue-600 text-white text-[10px] px-2 py-1 rounded uppercase tracking-wider">+ Tarea</button></td>`;
+                groupRow.className = "bg-gray-100 font-bold hover:bg-gray-200 transition-colors group";
+                // Atributos para Drag and Drop
+                groupRow.draggable = true;
+                groupRow.ondragstart = (e) => handleDragStart(e, gIdx);
+                groupRow.ondragover = (e) => handleDragOver(e);
+                groupRow.ondrop = (e) => handleDrop(e, gIdx);
+                groupRow.ondragend = (e) => handleDragEnd(e);
+
+                groupRow.innerHTML = `
+                    <td class="p-3 border-b">
+                        <div class="flex items-center gap-2">
+                           <!-- Manejador de arrastre -->
+                           <div class="drag-handle no-print" title="Arrastrar para reordenar grupo">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                           </div>
+                           <span class="mr-2 no-print cursor-pointer w-6 h-6 flex items-center justify-center hover:bg-gray-300 rounded" onclick="toggleGroup(${gIdx})">${grupo.visible ? '▼' : '▶'}</span>
+                           <span class="editable-cell flex-1" ondblclick="makeGroupEditable(this, ${gIdx})">${grupo.nombre}</span>
+                        </div>
+                    </td>
+                    <td class="p-3 border-b text-sm">--</td>
+                    <td class="p-3 border-b text-sm">${groupStart}</td>
+                    <td class="p-3 border-b text-sm">${groupEnd}</td>
+                    <td class="p-3 border-b text-center text-sm">${groupAvance}%</td>
+                    <td class="p-3 border-b text-center no-print">
+                        <div class="flex items-center justify-center gap-2">
+                           <button onclick="addTaskToGroup(${gIdx}, event)" class="bg-blue-500 hover:bg-blue-600 text-white text-[10px] px-2 py-1 rounded uppercase tracking-wider">+ Tarea</button>
+                           <button onclick="deleteGroup(${gIdx}, event)" class="text-red-400 hover:text-red-600 p-1">🗑️</button>
+                        </div>
+                    </td>`;
                 tbody.appendChild(groupRow);
+
                 if (grupo.visible) {
                     grupo.tareas.forEach((tarea, tIdx) => {
                         const key = `${gIdx}-${tIdx}`;
                         const val = pendingProgress[key] !== undefined ? pendingProgress[key] : (tarea.avances.length > 0 ? tarea.avances[tarea.avances.length-1] : 0);
                         const row = document.createElement('tr');
                         row.className = "hover:bg-white";
-                        row.innerHTML = `<td class="p-3 border-b pl-10 editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'nombre')">${tarea.nombre}</td><td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'id')">${tarea.id}</td><td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'inicio')">${tarea.inicio}</td><td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'fin')">${tarea.fin}</td><td class="p-3 border-b"><input type="number" value="${val}" onchange="pendingProgress['${key}']=parseInt(this.value)" class="w-16 border rounded text-center"></td><td class="p-3 border-b text-center no-print"><div class="flex items-center justify-center gap-2"><button onclick="moveTask(${gIdx}, ${tIdx}, -1)" class="text-gray-400 hover:text-blue-600 p-1" title="Subir">↑</button><button onclick="moveTask(${gIdx}, ${tIdx}, 1)" class="text-gray-400 hover:text-blue-600 p-1" title="Bajar">↓</button><button onmouseenter="showHistoryTooltip(event, ${gIdx}, ${tIdx})" class="text-blue-500 hover:scale-110 transition-transform px-1" title="Histórico">🕒</button><button onclick="deleteTask(${gIdx}, ${tIdx})" class="text-red-400 hover:text-red-600 p-1" title="Eliminar tarea">🗑️</button></div></td>`;
+                        row.innerHTML = `
+                            <td class="p-3 border-b pl-14 editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'nombre')">${tarea.nombre}</td>
+                            <td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'id')">${tarea.id}</td>
+                            <td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'inicio')">${tarea.inicio}</td>
+                            <td class="p-3 border-b text-sm editable-cell" ondblclick="makeEditable(this, ${gIdx}, ${tIdx}, 'fin')">${tarea.fin}</td>
+                            <td class="p-3 border-b">
+                                <input type="number" value="${val}" oninput="updateProgressState('${key}', this.value)" class="w-16 border rounded text-center">
+                            </td>
+                            <td class="p-3 border-b text-center no-print">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button onclick="moveTask(${gIdx}, ${tIdx}, -1)" class="text-gray-400 hover:text-blue-600 p-1">↑</button>
+                                    <button onclick="moveTask(${gIdx}, ${tIdx}, 1)" class="text-gray-400 hover:text-blue-600 p-1">↓</button>
+                                    <button onmouseenter="showHistoryTooltip(event, ${gIdx}, ${tIdx})" class="text-blue-500 hover:scale-110 transition-transform px-1">🕒</button>
+                                    <button onclick="deleteTask(${gIdx}, ${tIdx})" class="text-red-400 hover:text-red-600 p-1">🗑️</button>
+                                </div>
+                            </td>`;
                         tbody.appendChild(row);
                     });
                 }
@@ -482,9 +631,7 @@
             const viewEnd = document.getElementById('filterDateEnd').value;
             const manualMin = document.getElementById('manualMinY').value;
             const manualMax = document.getElementById('manualMaxY').value;
-
             if (!viewStart || !viewEnd) return;
-
             const startDate = new Date(viewStart);
             const endDate = new Date(viewEnd);
             const dateList = [];
@@ -495,14 +642,8 @@
             }
             const finalStr = endDate.toISOString().split('T')[0];
             if(!dateList.includes(finalStr)) dateList.push(finalStr);
-            
-            const allLabels = [...new Set([...dateList, ...projectData.fechasCorte])]
-                .filter(d => d >= viewStart && d <= viewEnd)
-                .sort();
-
-            const realPoints = [];
-            const planPoints = [];
-            const today = projectData.fechaActual;
+            const allLabels = [...new Set([...dateList, ...projectData.fechasCorte])].filter(d => d >= viewStart && d <= viewEnd).sort();
+            const realPoints = [], planPoints = [], today = projectData.fechaActual;
 
             allLabels.forEach(fecha => {
                 let sumReal = 0, sumPlan = 0, totalTasks = 0;
@@ -522,8 +663,7 @@
                             rVal = lastVal;
                         }
                         sumReal += rVal;
-                        const dStart = new Date(t.inicio);
-                        const dEnd = new Date(t.fin);
+                        const dStart = new Date(t.inicio), dEnd = new Date(t.fin);
                         if (dActual >= dEnd) sumPlan += 100;
                         else if (dActual > dStart) sumPlan += ((dActual - dStart) / (dEnd - dStart)) * 100;
                     });
@@ -534,7 +674,6 @@
 
             let minY = manualMin !== "" ? parseFloat(manualMin) : Math.max(0, Math.floor(Math.min(...realPoints, ...planPoints) / 10) * 10);
             let maxY = manualMax !== "" ? parseFloat(manualMax) : Math.min(100, Math.ceil(Math.max(...realPoints, ...planPoints) / 10) * 10);
-
             if (activeChart) activeChart.destroy();
             activeChart = new Chart(ctx, {
                 type: 'line',
@@ -574,8 +713,7 @@
 
         function createCustomSnapshot() {
             const selectedDate = document.getElementById('customSnapshotDate').value;
-            if (!selectedDate) return;
-            processSnapshot(selectedDate);
+            if (selectedDate) processSnapshot(selectedDate);
         }
 
         function createNewSnapshot() { processSnapshot(projectData.fechaActual); }
@@ -594,14 +732,11 @@
                     else t.avances.splice(cutIdx, 0, val);
                 });
             });
-            pendingProgress = {};
-            calculateProjectBoundaries();
-            renderAll();
+            pendingProgress = {}; calculateProjectBoundaries(); renderAll();
         }
 
         function generateTxtString() {
-            const fi = document.getElementById('filterDateStart').value;
-            const ff = document.getElementById('filterDateEnd').value;
+            const fi = document.getElementById('filterDateStart').value, ff = document.getElementById('filterDateEnd').value;
             let out = `*Proyecto*\n${projectData.nombreProyecto}\n\n*Grafico*\nFI:${fi}\nFF:${ff}\n\n`;
             out += projectData.fechasCorte.map(f => `#${f}#`).join('\n') + '\n\n';
             projectData.grupos.forEach(g => {
@@ -615,23 +750,48 @@
             return out;
         }
 
+        let ganttWindow = null;
+
+        function openGanttWindow() {
+            const txtToSend = generateTxtString() || rawTxtContent;
+            if (!txtToSend || projectData.grupos.length === 0) {
+                showStatus('Primero cargue un archivo .txt con tareas.', 'error');
+                return;
+            }
+            // Si la ventana ya existe y no está cerrada, la enfocamos; si no, la abrimos
+            if (ganttWindow && !ganttWindow.closed) {
+                ganttWindow.focus();
+                // Pequeño delay para asegurar que la ventana esté lista
+                setTimeout(() => ganttWindow.postMessage({ type: 'LOAD_TXT', content: txtToSend }, '*'), 200);
+            } else {
+                ganttWindow = window.open('gantt2.html', 'GanttWindow', 'width=1400,height=800,resizable=yes,scrollbars=yes');
+                // Esperamos a que la ventana cargue antes de enviar el mensaje
+                const sendWhenReady = setInterval(() => {
+                    if (ganttWindow && !ganttWindow.closed) {
+                        try {
+                            ganttWindow.postMessage({ type: 'LOAD_TXT', content: txtToSend }, '*');
+                            clearInterval(sendWhenReady);
+                        } catch(e) { /* ventana aún no lista */ }
+                    } else {
+                        clearInterval(sendWhenReady);
+                    }
+                }, 300);
+            }
+        }
+
         function downloadUpdatedTxt() {
             const content = generateTxtString();
             const blob = new Blob([content], { type: 'text/plain' });
             const a = document.createElement('a'); 
             a.href = URL.createObjectURL(blob); 
-            a.download = getFormattedFileName('txt'); 
-            a.click();
+            a.download = getFormattedFileName('txt'); a.click();
         }
 
         function generateReport() {
-            const element = document.getElementById('content');
-            const noPrintElements = document.querySelectorAll('.no-print');
+            const element = document.getElementById('content'), noPrintElements = document.querySelectorAll('.no-print');
             noPrintElements.forEach(el => el.style.display = 'none');
             const opt = { 
-                margin: [0.5, 0.5], 
-                filename: getFormattedFileName('pdf'), 
-                image: { type: 'jpeg', quality: 0.98 }, 
+                margin: [0.5, 0.5], filename: getFormattedFileName('pdf'), image: { type: 'jpeg', quality: 0.98 }, 
                 html2canvas: { scale: 2, useCORS: true, logging: false, width: element.scrollWidth }, 
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' },
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
