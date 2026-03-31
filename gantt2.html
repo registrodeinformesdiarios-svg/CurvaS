@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gantt de Bloques - Columna Fija</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --row-height: 50px;
+            --sidebar-width: 280px;
+        }
+
+        .gantt-container {
+            display: flex;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            overflow: hidden;
+            background: white;
+        }
+
+        /* Columna Izquierda Fija */
+        .gantt-sidebar {
+            width: var(--sidebar-width);
+            min-width: var(--sidebar-width);
+            flex-shrink: 0;
+            background: #f8fafc;
+            border-right: 2px solid #e2e8f0;
+            z-index: 60;
+        }
+
+        .sidebar-header {
+            height: 54px;
+            display: flex;
+            align-items: center;
+            padding: 0 1rem;
+            background: #f1f5f9;
+            border-bottom: 2px solid #cbd5e1;
+            font-size: 0.75rem;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sidebar-row {
+            height: var(--row-height);
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        /* Área de Cronograma Scrolleable */
+        .gantt-viewport {
+            overflow-x: auto;
+            flex-grow: 1;
+            background: #ffffff;
+        }
+
+        .gantt-grid {
+            display: inline-block;
+            position: relative;
+            min-width: 100%;
+        }
+
+        .gantt-header {
+            display: flex;
+            height: 54px;
+            background: #f1f5f9;
+            border-bottom: 2px solid #cbd5e1;
+        }
+
+        .gantt-header-cell {
+            height: 100%;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-right: 1px solid #cbd5e1;
+            font-size: 0.65rem;
+            font-weight: 800;
+            color: #475569;
+        }
+
+        .gantt-row {
+            display: flex;
+            height: var(--row-height);
+            border-bottom: 1px solid #f1f5f9;
+            position: relative;
+        }
+
+        .gantt-cell {
+            height: 100%;
+            flex-shrink: 0;
+            border-right: 1px solid #f1f5f9;
+        }
+
+        .task-bar {
+            position: absolute;
+            height: 28px;
+            top: 11px;
+            border-radius: 6px;
+            z-index: 10;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .task-bar:hover {
+            filter: brightness(1.1);
+            transform: scaleY(1.1);
+            z-index: 20;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .gantt-tooltip {
+            position: fixed;
+            display: none;
+            background: #0f172a;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            z-index: 1000;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .weekend { background-color: #f8fafc !important; }
+        
+        /* Estilos de ID */
+        .task-id {
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.7rem;
+            margin-right: 8px;
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        .task-name-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 p-4 md:p-8">
+
+    <div class="max-w-[1600px] mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 p-6">
+        <!-- Encabezado Principal -->
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                </div>
+                <div>
+                    <h2 id="project-title" class="text-2xl font-black text-slate-900 leading-tight">Visualizador de Cronograma</h2>
+                    <div id="project-range" class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1 opacity-70">
+                        Cargue un archivo .txt para comenzar
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                    <select id="scaleSelector" class="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 cursor-pointer px-3 py-1">
+                        <option value="daily">Vista Diaria</option>
+                        <option value="monthly">Vista Mensual</option>
+                    </select>
+                </div>
+                <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-bold shadow-md flex items-center gap-2 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    SUBIR ARCHIVO
+                    <input type="file" id="fileInput" class="hidden" accept=".txt">
+                </label>
+            </div>
+        </div>
+
+        <!-- Componente Gantt con Columna Fija -->
+        <div id="gantt-main-component" class="hidden">
+            <div class="gantt-container">
+                <!-- Sidebar fija -->
+                <div class="gantt-sidebar">
+                    <div class="sidebar-header">ID & Tarea</div>
+                    <div id="sidebar-content"></div>
+                </div>
+
+                <!-- Cronograma scrolleable -->
+                <div id="gantt-viewport" class="gantt-viewport">
+                    <div id="gantt-chart" class="gantt-grid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div id="empty-state" class="py-32 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-400 font-bold uppercase tracking-widest text-sm italic">Cargue un archivo .txt o ábralo desde el Panel de Control</p>
+        </div>
+    </div>
+
+    <div id="gantt-tooltip" class="gantt-tooltip"></div>
+
+    <script>
+        let currentData = null;
+        let currentScale = 'daily';
+        
+        const SCALE_CONFIG = {
+            daily: { cellWidth: 40 },
+            monthly: { cellWidth: 120 }
+        };
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                currentData = parseGanttData(e.target.result);
+                renderGantt();
+            };
+            reader.readAsText(file);
+        });
+
+        // Recibe el TXT enviado desde indexJ4.html via postMessage
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'LOAD_TXT' && event.data.content) {
+                currentData = parseGanttData(event.data.content);
+                renderGantt();
+            }
+        });
+
+        document.getElementById('scaleSelector').addEventListener('change', (e) => {
+            currentScale = e.target.value;
+            if (currentData) renderGantt();
+        });
+
+        function parseCleanDate(dateStr) {
+            if (!dateStr || typeof dateStr !== 'string') return null;
+            const clean = dateStr.trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
+            const date = new Date(clean + 'T00:00:00');
+            return (date instanceof Date && !isNaN(date)) ? date : null;
+        }
+
+        function parseGanttData(text) {
+            const lines = text.split(/\r?\n/).map(l => l.trim());
+            const data = { proyecto: "Proyecto", madres: [] };
+            let currentMother = null;
+            let allDates = [];
+
+            lines.forEach((line, i) => {
+                if (!line) return;
+                
+                if (line.toLowerCase().includes('*proyecto*')) {
+                    data.proyecto = lines[i+1] || data.proyecto;
+                }
+
+                if (line.startsWith('<') && !line.startsWith('<<')) {
+                    currentMother = { 
+                        nombre: line.replace(/[<>]/g, '').trim(), 
+                        id: '---', // Por defecto si no hay hijas
+                        inicio: null, 
+                        fin: null 
+                    };
+                    data.madres.push(currentMother);
+                }
+
+                if (line.startsWith('<<') && currentMother) {
+                    const matches = line.match(/\(([^)]+)\)/g);
+                    if (matches && matches.length >= 3) {
+                        const idStr = matches[0].replace(/[()]/g, '').trim();
+                        const sStr = matches[1].replace(/[()]/g, '').trim();
+                        const eStr = matches[2].replace(/[()]/g, '').trim();
+                        
+                        const dStart = parseCleanDate(sStr);
+                        const dEnd = parseCleanDate(eStr);
+
+                        if (dStart) {
+                            allDates.push(dStart);
+                            if (!currentMother.inicio || dStart < parseCleanDate(currentMother.inicio)) currentMother.inicio = sStr;
+                        }
+                        if (dEnd) {
+                            allDates.push(dEnd);
+                            if (!currentMother.fin || dEnd > parseCleanDate(currentMother.fin)) currentMother.fin = eStr;
+                        }
+                        // Tomamos el ID de la primera hija como referencia del grupo o dejamos el último
+                        if (currentMother.id === '---') currentMother.id = idStr;
+                    }
+                }
+            });
+
+            if (allDates.length > 0) {
+                const min = new Date(Math.min(...allDates));
+                const max = new Date(Math.max(...allDates));
+                // Normalizar rango a meses completos para el grid
+                min.setDate(1);
+                max.setMonth(max.getMonth() + 1);
+                max.setDate(0);
+                data.start = min;
+                data.end = max;
+            }
+            return data;
+        }
+
+        function renderGantt() {
+            const chart = document.getElementById('gantt-chart');
+            const sidebar = document.getElementById('sidebar-content');
+            const title = document.getElementById('project-title');
+            const rangeInfo = document.getElementById('project-range');
+            const component = document.getElementById('gantt-main-component');
+            const emptyState = document.getElementById('empty-state');
+            const tooltip = document.getElementById('gantt-tooltip');
+
+            if (!currentData || !currentData.start) return;
+
+            title.innerText = currentData.proyecto;
+            rangeInfo.innerText = `${currentData.start.toISOString().split('T')[0]} / ${currentData.end.toISOString().split('T')[0]}`;
+            emptyState.classList.add('hidden');
+            component.classList.remove('hidden');
+
+            chart.innerHTML = '';
+            sidebar.innerHTML = '';
+
+            const dateStart = new Date(currentData.start);
+            const dateEnd = new Date(currentData.end);
+            const cellWidth = SCALE_CONFIG[currentScale].cellWidth;
+
+            // 1. Cabecera
+            const header = document.createElement('div');
+            header.className = 'gantt-header';
+            
+            let headersData = [];
+            if (currentScale === 'daily') {
+                const totalDays = Math.ceil((dateEnd - dateStart) / (1000 * 60 * 60 * 24)) + 1;
+                for (let i = 0; i < totalDays; i++) {
+                    const current = new Date(dateStart);
+                    current.setDate(current.getDate() + i);
+                    headersData.push({
+                        label: `<span>${current.getDate()}</span><span class="opacity-40 text-[7px]">${current.toLocaleDateString('es', {month: 'short'})}</span>`,
+                        isWE: current.getDay() === 0 || current.getDay() === 6
+                    });
+                }
+            } else {
+                // Arreglo aquí: Iterar meses correctamente
+                let temp = new Date(dateStart);
+                while (temp <= dateEnd) {
+                    headersData.push({
+                        label: `<span class="text-[10px] font-bold text-slate-700">${temp.toLocaleDateString('es', {month: 'short'}).toUpperCase()}</span><span class="opacity-40 text-[7px]">${temp.getFullYear()}</span>`,
+                        isWE: false
+                    });
+                    // Importante: Sumar un mes correctamente
+                    temp.setMonth(temp.getMonth() + 1);
+                }
+            }
+
+            headersData.forEach(h => {
+                const hCell = document.createElement('div');
+                hCell.className = 'gantt-header-cell';
+                hCell.style.width = cellWidth + 'px';
+                if (h.isWE) hCell.classList.add('weekend');
+                hCell.innerHTML = h.label;
+                header.appendChild(hCell);
+            });
+            chart.appendChild(header);
+
+            // 2. Filas
+            const validMadres = currentData.madres.filter(m => m.inicio && m.fin);
+            const colors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#0ea5e9', '#ef4444', '#14b8a6'];
+
+            validMadres.forEach((madre, idx) => {
+                // Sidebar item
+                const sRow = document.createElement('div');
+                sRow.className = 'sidebar-row';
+                sRow.innerHTML = `<span class="task-id">${madre.id}</span><span class="task-name-text" title="${madre.nombre}">${madre.nombre}</span>`;
+                sidebar.appendChild(sRow);
+
+                // Gantt Row
+                const gRow = document.createElement('div');
+                gRow.className = 'gantt-row';
+                headersData.forEach(h => {
+                    const cell = document.createElement('div');
+                    cell.className = 'gantt-cell';
+                    cell.style.width = cellWidth + 'px';
+                    if (h.isWE) cell.classList.add('weekend');
+                    gRow.appendChild(cell);
+                });
+
+                // Task Bar
+                const mS = parseCleanDate(madre.inicio);
+                const mE = parseCleanDate(madre.fin);
+                
+                if (mS && mE) {
+                    let left, width;
+                    if (currentScale === 'daily') {
+                        left = ((mS - dateStart) / (1000 * 60 * 60 * 24)) * cellWidth;
+                        width = (((mE - mS) / (1000 * 60 * 60 * 24)) + 1) * cellWidth;
+                    } else {
+                        const startDiff = (mS.getFullYear() - dateStart.getFullYear()) * 12 + (mS.getMonth() - dateStart.getMonth());
+                        const prog = (mS.getDate() - 1) / new Date(mS.getFullYear(), mS.getMonth() + 1, 0).getDate();
+                        left = (startDiff + prog) * cellWidth;
+                        width = ((((mE - mS) / (1000 * 60 * 60 * 24)) + 1) / 30.44) * cellWidth;
+                    }
+
+                    const bar = document.createElement('div');
+                    bar.className = 'task-bar';
+                    bar.style.left = left + 'px';
+                    bar.style.width = Math.max(8, width) + 'px';
+                    bar.style.backgroundColor = colors[idx % colors.length];
+
+                    bar.onmouseenter = (e) => {
+                        tooltip.style.display = 'block';
+                        tooltip.innerHTML = `
+                            <div class="font-black text-white mb-1">${madre.nombre}</div>
+                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">ID: ${madre.id}</div>
+                            <div class="grid grid-cols-2 gap-3 border-t border-slate-700 pt-2">
+                                <div><div class="text-[9px] text-slate-500 uppercase">Inicio</div><div class="text-xs font-mono font-bold">${madre.inicio}</div></div>
+                                <div><div class="text-[9px] text-slate-500 uppercase">Fin</div><div class="text-xs font-mono font-bold">${madre.fin}</div></div>
+                            </div>
+                        `;
+                    };
+                    bar.onmousemove = (e) => {
+                        tooltip.style.left = (e.clientX + 15) + 'px';
+                        tooltip.style.top = (e.clientY + 15) + 'px';
+                    };
+                    bar.onmouseleave = () => tooltip.style.display = 'none';
+
+                    gRow.appendChild(bar);
+                }
+                chart.appendChild(gRow);
+            });
+        }
+    </script>
+</body>
+</html>
