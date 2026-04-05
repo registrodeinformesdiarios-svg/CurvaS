@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gantt de Bloques - Columna Fija</title>
+    <title>Gantt de Bloques - Inspección Detallada</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -17,9 +17,10 @@
             border-radius: 1rem;
             overflow: hidden;
             background: white;
+            position: relative;
+            min-height: 400px;
         }
 
-        /* Columna Izquierda Fija */
         .gantt-sidebar {
             width: var(--sidebar-width);
             min-width: var(--sidebar-width);
@@ -40,7 +41,6 @@
             font-weight: 800;
             color: #475569;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
         }
 
         .sidebar-row {
@@ -52,19 +52,21 @@
             font-size: 0.75rem;
             font-weight: 600;
             color: #1e293b;
+            overflow: hidden;
         }
 
-        /* Área de Cronograma Scrolleable */
         .gantt-viewport {
             overflow-x: auto;
             flex-grow: 1;
             background: #ffffff;
+            position: relative;
         }
 
         .gantt-grid {
             display: inline-block;
             position: relative;
             min-width: 100%;
+            height: 100%;
         }
 
         .gantt-header {
@@ -100,41 +102,140 @@
             border-right: 1px solid #f1f5f9;
         }
 
-        .task-bar {
+        .task-bar-container {
             position: absolute;
-            height: 28px;
-            top: 11px;
-            border-radius: 6px;
+            top: 8px;
+            bottom: 8px;
             z-index: 10;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .task-bar:hover {
-            filter: brightness(1.1);
-            transform: scaleY(1.1);
-            z-index: 20;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        .gantt-tooltip {
-            position: fixed;
-            display: none;
-            background: #0f172a;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 0.8rem;
             pointer-events: none;
-            z-index: 1000;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .master-bar {
+            position: absolute;
+            height: 100%;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            z-index: 1;
+            opacity: 0.8;
+        }
+
+        .task-segment {
+            position: absolute;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.3);
+            transition: transform 0.1s;
+            pointer-events: auto;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .task-segment:hover {
+            transform: scaleY(1.05);
+            filter: brightness(1.1);
+            z-index: 20;
+        }
+
+        .task-progress-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: rgba(0,0,0,0.25);
+            border-radius: 0 0 4px 4px;
+        }
+
+        .timeline-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            z-index: 45;
+            pointer-events: none;
+        }
+
+        .line-corte { border-left: 2px dashed #94a3b8; }
+        .line-today { border-left: 2px solid #10b981; }
+
+        .timeline-label {
+            position: absolute;
+            top: 0;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 8px;
+            font-weight: 900;
+            padding: 2px 5px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            z-index: 46;
+            white-space: nowrap;
+            transition: top 0.2s;
+        }
+
+        .label-corte { background: #94a3b8; }
+        .label-today { background: #10b981; box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3); }
+
+        .inspect-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #3b82f6;
+            z-index: 55;
+            pointer-events: none;
+            display: none;
+        }
+
+        .fixed-inspect-line {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #6366f1;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        .inspect-marker {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #3b82f6;
+            color: white;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .fixed-marker-id {
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #6366f1;
+            color: white;
+            font-size: 10px;
+            font-weight: 900;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
 
         .weekend { background-color: #f8fafc !important; }
         
-        /* Estilos de ID */
         .task-id {
             background: #e2e8f0;
             color: #475569;
@@ -145,98 +246,138 @@
             margin-right: 8px;
             min-width: 35px;
             text-align: center;
+            flex-shrink: 0;
         }
-        
-        .task-name-text {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+
+        .inspection-block {
+            min-width: 300px;
+            max-width: 300px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .today-block {
+            border: 2px solid #10b981;
+            background: #f0fdf4;
+        }
+
+        #gantt-tooltip {
+            position: fixed;
+            z-index: 1000;
+            background: #1e293b;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            max-width: 280px;
+            border: 1px solid rgba(255,255,255,0.1);
         }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-8">
 
-    <div class="max-w-[1600px] mx-auto bg-white rounded-3xl shadow-xl border border-slate-200 p-6">
-        <!-- Encabezado Principal -->
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-6">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
-                </div>
-                <div>
-                    <h2 id="project-title" class="text-2xl font-black text-slate-900 leading-tight">Visualizador de Cronograma</h2>
-                    <div id="project-range" class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1 opacity-70">
-                        Cargue un archivo .txt para comenzar
+    <div id="gantt-tooltip"></div>
+
+    <div class="max-w-[1600px] mx-auto space-y-6">
+        <!-- Header -->
+        <div class="bg-white rounded-3xl shadow-xl border border-slate-200 p-6">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
                     </div>
+                    <div>
+                        <h2 id="project-title" class="text-2xl font-black text-slate-900 leading-tight">Visualizador de Cronograma</h2>
+                        <div id="project-range" class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-1 opacity-70">Cargue un archivo .txt</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button id="toggleCursorBtn" onclick="toggleCursor()" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl transition-all text-xs font-bold flex items-center gap-2">
+                        <span id="cursorStatusIcon" class="w-2 h-2 bg-slate-400 rounded-full"></span>
+                        <span id="cursorBtnText">ACTIVAR CURSOR</span>
+                    </button>
+                    <select id="scaleSelector" class="bg-slate-100 border-none text-xs font-bold text-slate-700 rounded-xl px-4 py-2 cursor-pointer">
+                        <option value="monthly">Vista Mensual</option>
+                        <option value="daily">Vista Diaria</option>
+                    </select>
+                    <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-bold shadow-md flex items-center gap-2">
+                        SUBIR ARCHIVO
+                        <input type="file" id="fileInput" class="hidden" accept=".txt">
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Inspection Area -->
+        <div id="inspection-area" class="hidden space-y-4">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-black text-slate-800 uppercase tracking-widest">Inspección de Tareas Activas</h3>
+                <div class="flex gap-2">
+                    <input type="date" id="manualDateInput" class="bg-white border border-slate-200 text-xs rounded-lg px-3 py-1">
+                    <button onclick="addBlockByManualDate()" class="bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-bold px-3 py-1 rounded-lg">AÑADIR FECHA</button>
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                    <select id="scaleSelector" class="bg-transparent border-none text-xs font-bold text-slate-700 focus:ring-0 cursor-pointer px-3 py-1">
-                        <option value="daily">Vista Diaria</option>
-                        <option value="monthly">Vista Mensual</option>
-                    </select>
-                </div>
-                <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-bold shadow-md flex items-center gap-2 active:scale-95">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    SUBIR ARCHIVO
-                    <input type="file" id="fileInput" class="hidden" accept=".txt">
-                </label>
+            <div class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                <div id="today-inspection-block" class="inspection-block today-block sticky left-0 z-10 shrink-0"></div>
+                <div class="w-px bg-slate-200 self-stretch my-2"></div>
+                <div id="inspection-list-container" class="flex gap-4"></div>
             </div>
         </div>
 
-        <!-- Componente Gantt con Columna Fija -->
+        <div id="empty-state" class="py-32 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
+            <p class="text-slate-400 font-bold uppercase tracking-widest text-sm">Seleccione un archivo de cronograma</p>
+        </div>
+
+        <!-- Gantt -->
         <div id="gantt-main-component" class="hidden">
-            <div class="gantt-container">
-                <!-- Sidebar fija -->
+            <div class="gantt-container shadow-sm border-slate-200">
                 <div class="gantt-sidebar">
-                    <div class="sidebar-header">ID & Tarea</div>
+                    <div class="sidebar-header">ID & TAREA</div>
                     <div id="sidebar-content"></div>
                 </div>
 
-                <!-- Cronograma scrolleable -->
                 <div id="gantt-viewport" class="gantt-viewport">
-                    <div id="gantt-chart" class="gantt-grid"></div>
+                    <div id="gantt-chart" class="gantt-grid">
+                        <div id="inspect-line" class="inspect-line">
+                            <div id="inspect-marker" class="inspect-marker">FECHA</div>
+                        </div>
+                        <div id="fixed-lines-container"></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Estado vacío -->
-        <div id="empty-state" class="py-32 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-            <p class="text-slate-400 font-bold uppercase tracking-widest text-sm italic">Cargue un archivo .txt o ábralo desde el Panel de Control</p>
-        </div>
     </div>
-
-    <div id="gantt-tooltip" class="gantt-tooltip"></div>
 
     <script>
         let currentData = null;
-        let currentScale = 'daily';
-        
-        const SCALE_CONFIG = {
-            daily: { cellWidth: 40 },
-            monthly: { cellWidth: 120 }
-        };
+        let currentScale = 'monthly';
+        let isCursorActive = false;
+        let blockCounter = 0;
+        let inspectionHistory = []; // Almacena {id, date}
+        const tooltip = document.getElementById('gantt-tooltip');
+
+        const CHILD_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#a855f7'];
 
         document.getElementById('fileInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = (e) => {
                 currentData = parseGanttData(e.target.result);
                 renderGantt();
+                updateTodayBlock();
             };
             reader.readAsText(file);
-        });
-
-        // Recibe el TXT enviado desde indexJ4.html via postMessage
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'LOAD_TXT' && event.data.content) {
-                currentData = parseGanttData(event.data.content);
-                renderGantt();
-            }
         });
 
         document.getElementById('scaleSelector').addEventListener('change', (e) => {
@@ -248,197 +389,533 @@
             if (!dateStr || typeof dateStr !== 'string') return null;
             const clean = dateStr.trim();
             if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
-            const date = new Date(clean + 'T00:00:00');
-            return (date instanceof Date && !isNaN(date)) ? date : null;
+            const [y, m, d] = clean.split('-').map(Number);
+            return new Date(y, m - 1, d, 0, 0, 0, 0);
         }
 
         function parseGanttData(text) {
             const lines = text.split(/\r?\n/).map(l => l.trim());
-            const data = { proyecto: "Proyecto", madres: [] };
+            const data = { proyecto: "Proyecto", madres: [], hoy: null, start: null, end: null };
             let currentMother = null;
-            let allDates = [];
+            let allTaskDates = [];
 
-            lines.forEach((line, i) => {
-                if (!line) return;
+            // Pre-pass: count how many cut dates (#fecha#) exist.
+            // This tells us which progress line index to use (0-based).
+            const cutDateCount = lines.filter(l => /^#\d{4}-\d{2}-\d{2}#$/.test(l)).length;
+            // Index of the current progress = cutDateCount - 1 (last cut date).
+            // If no cut dates, default to last line.
+            const progressIndex = Math.max(cutDateCount - 1, 0);
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line) continue;
                 
                 if (line.toLowerCase().includes('*proyecto*')) {
                     data.proyecto = lines[i+1] || data.proyecto;
+                    continue;
                 }
+
+                const updateMatch = line.match(/#(\d{4}-\d{2}-\d{2})#/);
+                if (updateMatch) data.hoy = updateMatch[1];
 
                 if (line.startsWith('<') && !line.startsWith('<<')) {
                     currentMother = { 
                         nombre: line.replace(/[<>]/g, '').trim(), 
-                        id: '---', // Por defecto si no hay hijas
+                        id: '---', 
                         inicio: null, 
-                        fin: null 
+                        fin: null,
+                        hijas: []
                     };
                     data.madres.push(currentMother);
+                    continue;
                 }
 
                 if (line.startsWith('<<') && currentMother) {
-                    const matches = line.match(/\(([^)]+)\)/g);
-                    if (matches && matches.length >= 3) {
-                        const idStr = matches[0].replace(/[()]/g, '').trim();
-                        const sStr = matches[1].replace(/[()]/g, '').trim();
-                        const eStr = matches[2].replace(/[()]/g, '').trim();
+                    const nameMatch = line.match(/<<([^>]+)>>/);
+                    const nombreHija = nameMatch ? nameMatch[1].trim() : "Tarea";
+
+                    const params = line.match(/\(([^)]+)\)/g);
+                    if (params && params.length >= 3) {
+                        const idStr = params[0].replace(/[()]/g, '').trim();
+                        const sStr = params[1].replace(/[()|]/g, '').trim();
+                        const eStr = params[2].replace(/[()|]/g, '').trim();
                         
+                        if (currentMother.id === '---') currentMother.id = idStr;
+
+                        // Collect all consecutive (X%) lines after this child task line.
+                        // One line per cut date (#fecha#) in the file.
+                        // Use progressIndex (= cutDateCount - 1) to pick the most recent cut date's value.
+                        let progressValues = [];
+                        for (let j = i + 1; j < lines.length; j++) {
+                            const jLine = lines[j];
+                            if (!jLine) continue; // skip blank lines
+                            if (jLine.startsWith('<') || jLine.startsWith('*') || jLine.startsWith('#')) break;
+                            const progMatch = jLine.match(/^\((\d+)%\)$/);
+                            if (progMatch) {
+                                progressValues.push(parseInt(progMatch[1]));
+                            } else {
+                                break;
+                            }
+                        }
+
+                        // Pick the progress at progressIndex (last cut date), fallback to last available.
+                        let progreso = 0;
+                        if (progressValues.length > 0) {
+                            const idx = Math.min(progressIndex, progressValues.length - 1);
+                            progreso = progressValues[idx];
+                        }
+
+                        const hija = { id: idStr, inicio: sStr, fin: eStr, nombre: nombreHija, progreso: progreso };
+                        currentMother.hijas.push(hija);
+
                         const dStart = parseCleanDate(sStr);
                         const dEnd = parseCleanDate(eStr);
+                        if (dStart) allTaskDates.push(dStart);
+                        if (dEnd) allTaskDates.push(dEnd);
 
-                        if (dStart) {
-                            allDates.push(dStart);
-                            if (!currentMother.inicio || dStart < parseCleanDate(currentMother.inicio)) currentMother.inicio = sStr;
-                        }
-                        if (dEnd) {
-                            allDates.push(dEnd);
-                            if (!currentMother.fin || dEnd > parseCleanDate(currentMother.fin)) currentMother.fin = eStr;
-                        }
-                        // Tomamos el ID de la primera hija como referencia del grupo o dejamos el último
-                        if (currentMother.id === '---') currentMother.id = idStr;
+                        if (!currentMother.inicio || (dStart && dStart < parseCleanDate(currentMother.inicio))) currentMother.inicio = sStr;
+                        if (!currentMother.fin || (dEnd && dEnd > parseCleanDate(currentMother.fin))) currentMother.fin = eStr;
                     }
                 }
-            });
-
-            if (allDates.length > 0) {
-                const min = new Date(Math.min(...allDates));
-                const max = new Date(Math.max(...allDates));
-                // Normalizar rango a meses completos para el grid
-                min.setDate(1);
-                max.setMonth(max.getMonth() + 1);
-                max.setDate(0);
-                data.start = min;
-                data.end = max;
             }
+
+            if (allTaskDates.length > 0) {
+                const minTime = Math.min(...allTaskDates);
+                const maxTime = Math.max(...allTaskDates);
+                const duration = maxTime - minTime;
+                const offset = Math.max(duration * 0.05, 86400000 * 2); 
+
+                const s = new Date(minTime - offset);
+                s.setHours(0,0,0,0);
+                const e = new Date(maxTime + offset);
+                e.setHours(0,0,0,0);
+                data.start = s;
+                data.end = e;
+            }
+            
             return data;
         }
+
+        function toggleCursor() {
+            const btn = document.getElementById('toggleCursorBtn');
+            const icon = document.getElementById('cursorStatusIcon');
+            const txt = document.getElementById('cursorBtnText');
+            const line = document.getElementById('inspect-line');
+            if (!btn || !line) return;
+            isCursorActive = !isCursorActive;
+            if (isCursorActive) {
+                btn.className = "bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl transition-all text-xs font-bold flex items-center gap-2";
+                if (icon) icon.className = "w-2 h-2 bg-white rounded-full animate-pulse";
+                if (txt) txt.innerText = "CURSOR ACTIVO";
+                line.style.display = 'block';
+                tooltip.style.display = 'none';
+            } else {
+                btn.className = "bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2.5 rounded-xl transition-all text-xs font-bold flex items-center gap-2";
+                if (icon) icon.className = "w-2 h-2 bg-slate-400 rounded-full";
+                if (txt) txt.innerText = "ACTIVAR CURSOR";
+                line.style.display = 'none';
+            }
+        }
+
+        function getLeftPos(targetDate, dateStart, cellWidth) {
+            const target = new Date(targetDate.getTime());
+            target.setHours(0,0,0,0);
+            const diffMs = target - dateStart;
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            
+            if (currentScale === 'daily') {
+                return diffDays * cellWidth;
+            } else {
+                let monthsDiff = (target.getFullYear() - dateStart.getFullYear()) * 12 + (target.getMonth() - dateStart.getMonth());
+                let dayOfMonth = target.getDate();
+                let daysInMonth = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+                return (monthsDiff * cellWidth) + ((dayOfMonth - 1) / daysInMonth * cellWidth);
+            }
+        };
 
         function renderGantt() {
             const chart = document.getElementById('gantt-chart');
             const sidebar = document.getElementById('sidebar-content');
-            const title = document.getElementById('project-title');
-            const rangeInfo = document.getElementById('project-range');
             const component = document.getElementById('gantt-main-component');
+            const inspectArea = document.getElementById('inspection-area');
             const emptyState = document.getElementById('empty-state');
-            const tooltip = document.getElementById('gantt-tooltip');
+            const toggleBtn = document.getElementById('toggleCursorBtn');
+            const inspectLine = document.getElementById('inspect-line');
+            const fixedLinesContainer = document.getElementById('fixed-lines-container');
+            const cellWidth = currentScale === 'daily' ? 40 : 120;
 
             if (!currentData || !currentData.start) return;
 
-            title.innerText = currentData.proyecto;
-            rangeInfo.innerText = `${currentData.start.toISOString().split('T')[0]} / ${currentData.end.toISOString().split('T')[0]}`;
+            const dateStart = new Date(currentData.start.getTime());
+            dateStart.setHours(0,0,0,0);
+            const dateEnd = new Date(currentData.end.getTime());
+            dateEnd.setHours(0,0,0,0);
+
+            document.getElementById('project-title').innerText = currentData.proyecto;
+            document.getElementById('project-range').innerText = `${dateStart.toISOString().split('T')[0]} / ${dateEnd.toISOString().split('T')[0]}`;
             emptyState.classList.add('hidden');
             component.classList.remove('hidden');
+            inspectArea.classList.remove('hidden');
+            toggleBtn.classList.remove('hidden');
 
             chart.innerHTML = '';
+            chart.appendChild(inspectLine);
+            chart.appendChild(fixedLinesContainer);
+            fixedLinesContainer.innerHTML = ''; 
             sidebar.innerHTML = '';
 
-            const dateStart = new Date(currentData.start);
-            const dateEnd = new Date(currentData.end);
-            const cellWidth = SCALE_CONFIG[currentScale].cellWidth;
-
-            // 1. Cabecera
             const header = document.createElement('div');
             header.className = 'gantt-header';
-            
             let headersData = [];
+
+            const totalDays = Math.round((dateEnd - dateStart) / (1000 * 60 * 60 * 24));
+            
             if (currentScale === 'daily') {
-                const totalDays = Math.ceil((dateEnd - dateStart) / (1000 * 60 * 60 * 24)) + 1;
-                for (let i = 0; i < totalDays; i++) {
-                    const current = new Date(dateStart);
+                for (let i = 0; i <= totalDays; i++) {
+                    const current = new Date(dateStart.getTime());
                     current.setDate(current.getDate() + i);
-                    headersData.push({
-                        label: `<span>${current.getDate()}</span><span class="opacity-40 text-[7px]">${current.toLocaleDateString('es', {month: 'short'})}</span>`,
-                        isWE: current.getDay() === 0 || current.getDay() === 6
+                    headersData.push({ 
+                        date: current,
+                        label: `<span>${current.getDate()}</span><span class="opacity-40 text-[7px]">${current.toLocaleDateString('es', {month: 'short'})}</span>`, 
+                        isWE: current.getDay() === 0 || current.getDay() === 6 
                     });
                 }
             } else {
-                // Arreglo aquí: Iterar meses correctamente
-                let temp = new Date(dateStart);
+                let temp = new Date(dateStart.getTime());
                 while (temp <= dateEnd) {
-                    headersData.push({
-                        label: `<span class="text-[10px] font-bold text-slate-700">${temp.toLocaleDateString('es', {month: 'short'}).toUpperCase()}</span><span class="opacity-40 text-[7px]">${temp.getFullYear()}</span>`,
-                        isWE: false
+                    headersData.push({ 
+                        date: new Date(temp.getTime()),
+                        label: `<span class="text-[10px] font-bold">${temp.toLocaleDateString('es', {month: 'short'}).toUpperCase()}</span>`, 
+                        isWE: false 
                     });
-                    // Importante: Sumar un mes correctamente
                     temp.setMonth(temp.getMonth() + 1);
                 }
             }
 
             headersData.forEach(h => {
-                const hCell = document.createElement('div');
-                hCell.className = 'gantt-header-cell';
-                hCell.style.width = cellWidth + 'px';
-                if (h.isWE) hCell.classList.add('weekend');
-                hCell.innerHTML = h.label;
-                header.appendChild(hCell);
+                const cell = document.createElement('div');
+                cell.className = 'gantt-header-cell';
+                cell.style.width = cellWidth + 'px';
+                if (h.isWE) cell.classList.add('weekend');
+                cell.innerHTML = h.label;
+                header.appendChild(cell);
             });
             chart.appendChild(header);
 
-            // 2. Filas
-            const validMadres = currentData.madres.filter(m => m.inicio && m.fin);
-            const colors = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#0ea5e9', '#ef4444', '#14b8a6'];
+            let posCorte = -1000;
+            let posToday = -1000;
 
-            validMadres.forEach((madre, idx) => {
-                // Sidebar item
-                const sRow = document.createElement('div');
-                sRow.className = 'sidebar-row';
-                sRow.innerHTML = `<span class="task-id">${madre.id}</span><span class="task-name-text" title="${madre.nombre}">${madre.nombre}</span>`;
-                sidebar.appendChild(sRow);
+            if (currentData.hoy) {
+                const corteRef = parseCleanDate(currentData.hoy);
+                if (corteRef >= dateStart && corteRef <= dateEnd) {
+                    posCorte = getLeftPos(corteRef, dateStart, cellWidth);
+                    const l = document.createElement('div');
+                    l.className = 'timeline-line line-corte';
+                    l.style.left = posCorte + 'px';
+                    const lab = document.createElement('div');
+                    lab.className = 'timeline-label label-corte';
+                    lab.innerText = 'Corte';
+                    lab.style.left = posCorte + 'px';
+                    chart.appendChild(l);
+                    chart.appendChild(lab);
+                }
+            }
 
-                // Gantt Row
-                const gRow = document.createElement('div');
-                gRow.className = 'gantt-row';
-                headersData.forEach(h => {
-                    const cell = document.createElement('div');
-                    cell.className = 'gantt-cell';
-                    cell.style.width = cellWidth + 'px';
-                    if (h.isWE) cell.classList.add('weekend');
-                    gRow.appendChild(cell);
-                });
+            const hoyReal = new Date();
+            hoyReal.setHours(0,0,0,0);
+            if (hoyReal >= dateStart && hoyReal <= dateEnd) {
+                posToday = getLeftPos(hoyReal, dateStart, cellWidth);
+                const l = document.createElement('div');
+                l.className = 'timeline-line line-today';
+                l.style.left = posToday + 'px';
+                const lab = document.createElement('div');
+                lab.className = 'timeline-label label-today';
+                lab.innerText = 'Hoy';
+                lab.style.left = posToday + 'px';
+                
+                // Evitar solapamiento con etiqueta Corte
+                if (Math.abs(posToday - posCorte) < 60) {
+                    lab.style.top = '18px';
+                }
 
-                // Task Bar
+                chart.appendChild(l);
+                chart.appendChild(lab);
+            }
+
+            // Redibujar cursores fijos guardados en el historial
+            inspectionHistory.forEach(insp => {
+                const xPos = getLeftPos(insp.date, dateStart, cellWidth);
+                const fLine = document.createElement('div');
+                fLine.className = 'fixed-inspect-line';
+                fLine.id = `fixed-line-${insp.id}`;
+                fLine.style.left = xPos + 'px';
+                fLine.innerHTML = `<div class="fixed-marker-id">${insp.id}</div>`;
+                fixedLinesContainer.appendChild(fLine);
+            });
+
+            // Tareas
+            currentData.madres.forEach((madre) => {
                 const mS = parseCleanDate(madre.inicio);
                 const mE = parseCleanDate(madre.fin);
                 
+                let lanes = [];
+                madre.hijas.forEach(hija => {
+                    const hS = parseCleanDate(hija.inicio);
+                    const hE = parseCleanDate(hija.fin);
+                    if(!hS || !hE) return;
+
+                    let assigned = false;
+                    for(let i=0; i < lanes.length; i++){
+                        const lastInLane = lanes[i][lanes[i].length - 1];
+                        const lastEnd = parseCleanDate(lastInLane.fin);
+                        if(hS >= lastEnd) {
+                            lanes[i].push(hija);
+                            assigned = true;
+                            break;
+                        }
+                    }
+                    if(!assigned) lanes.push([hija]);
+                });
+
+                const numLanes = lanes.length || 1;
+                const rowH = Math.max(varRowHeight(), numLanes * 26 + 16);
+
+                const sRow = document.createElement('div');
+                sRow.className = 'sidebar-row';
+                sRow.style.height = rowH + 'px';
+                sRow.innerHTML = `<span class="task-id">${madre.id}</span><span class="truncate" title="${madre.nombre}">${madre.nombre}</span>`;
+                sidebar.appendChild(sRow);
+
+                const gRow = document.createElement('div');
+                gRow.className = 'gantt-row';
+                gRow.style.height = rowH + 'px';
+                headersData.forEach(h => {
+                    const c = document.createElement('div');
+                    c.className = 'gantt-cell';
+                    c.style.width = cellWidth + 'px';
+                    if (h.isWE) c.classList.add('weekend');
+                    gRow.appendChild(c);
+                });
+
                 if (mS && mE) {
-                    let left, width;
-                    if (currentScale === 'daily') {
-                        left = ((mS - dateStart) / (1000 * 60 * 60 * 24)) * cellWidth;
-                        width = (((mE - mS) / (1000 * 60 * 60 * 24)) + 1) * cellWidth;
-                    } else {
-                        const startDiff = (mS.getFullYear() - dateStart.getFullYear()) * 12 + (mS.getMonth() - dateStart.getMonth());
-                        const prog = (mS.getDate() - 1) / new Date(mS.getFullYear(), mS.getMonth() + 1, 0).getDate();
-                        left = (startDiff + prog) * cellWidth;
-                        width = ((((mE - mS) / (1000 * 60 * 60 * 24)) + 1) / 30.44) * cellWidth;
+                    const barContainer = document.createElement('div');
+                    barContainer.className = 'task-bar-container';
+                    barContainer.style.left = '0';
+                    barContainer.style.width = '100%';
+
+                    // Bloque Maestro (Gris)
+                    if (numLanes > 1) {
+                        const masterL = getLeftPos(mS, dateStart, cellWidth);
+                        const masterR = getLeftPos(mE, dateStart, cellWidth) + (currentScale === 'daily' ? cellWidth : cellWidth / 30); // Fin inclusivo
+                        const masterW = Math.max(masterR - masterL, 4);
+
+                        const masterBar = document.createElement('div');
+                        masterBar.className = 'master-bar';
+                        masterBar.style.left = masterL + 'px';
+                        masterBar.style.width = masterW + 'px';
+                        barContainer.appendChild(masterBar);
                     }
 
-                    const bar = document.createElement('div');
-                    bar.className = 'task-bar';
-                    bar.style.left = left + 'px';
-                    bar.style.width = Math.max(8, width) + 'px';
-                    bar.style.backgroundColor = colors[idx % colors.length];
+                    // Tareas hijas (Segmentos)
+                    lanes.forEach((lane, laneIdx) => {
+                        lane.forEach((hija) => {
+                            const hS = parseCleanDate(hija.inicio);
+                            const hE = parseCleanDate(hija.fin);
+                            const hLeft = getLeftPos(hS, dateStart, cellWidth);
+                            const hRight = getLeftPos(hE, dateStart, cellWidth) + (currentScale === 'daily' ? cellWidth : cellWidth / 30); // Fin inclusivo
+                            const hWidth = Math.max(hRight - hLeft, 4);
 
-                    bar.onmouseenter = (e) => {
-                        tooltip.style.display = 'block';
-                        tooltip.innerHTML = `
-                            <div class="font-black text-white mb-1">${madre.nombre}</div>
-                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-2">ID: ${madre.id}</div>
-                            <div class="grid grid-cols-2 gap-3 border-t border-slate-700 pt-2">
-                                <div><div class="text-[9px] text-slate-500 uppercase">Inicio</div><div class="text-xs font-mono font-bold">${madre.inicio}</div></div>
-                                <div><div class="text-[9px] text-slate-500 uppercase">Fin</div><div class="text-xs font-mono font-bold">${madre.fin}</div></div>
-                            </div>
-                        `;
-                    };
-                    bar.onmousemove = (e) => {
-                        tooltip.style.left = (e.clientX + 15) + 'px';
-                        tooltip.style.top = (e.clientY + 15) + 'px';
-                    };
-                    bar.onmouseleave = () => tooltip.style.display = 'none';
+                            const segment = document.createElement('div');
+                            segment.className = 'task-segment';
+                            segment.style.left = hLeft + 'px';
+                            segment.style.top = (laneIdx * 26) + 'px';
+                            segment.style.width = hWidth + 'px';
+                            
+                            const colorIdx = madre.hijas.indexOf(hija);
+                            segment.style.backgroundColor = CHILD_COLORS[colorIdx % CHILD_COLORS.length];
 
-                    gRow.appendChild(bar);
+                            const progressOverlay = document.createElement('div');
+                            progressOverlay.className = 'task-progress-overlay';
+                            progressOverlay.style.width = hija.progreso + '%';
+                            segment.appendChild(progressOverlay);
+
+                            segment.onmouseenter = (e) => {
+                                if (isCursorActive) return;
+                                tooltip.style.display = 'block';
+                                tooltip.innerHTML = `
+                                    <div class="font-black mb-1 text-white border-b border-white/10 pb-1">${hija.nombre}</div>
+                                    <div class="text-[9px] opacity-60 mb-2 uppercase tracking-tighter">ID: ${hija.id} | Madre: ${madre.nombre}</div>
+                                    <div class="grid grid-cols-2 gap-4 mb-2">
+                                        <div>
+                                            <div class="text-[8px] uppercase text-indigo-300 font-bold">Inicio</div>
+                                            <div class="text-[10px] font-mono">${hija.inicio}</div>
+                                        </div>
+                                        <div>
+                                            <div class="text-[8px] uppercase text-emerald-300 font-bold">Fin</div>
+                                            <div class="text-[10px] font-mono">${hija.fin}</div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2 pt-1 border-t border-white/10 font-bold text-white flex justify-between items-center">
+                                        <span class="text-[9px] uppercase opacity-60">Avance</span>
+                                        <span class="text-indigo-400 text-xs">${hija.progreso}%</span>
+                                    </div>
+                                `;
+                            };
+                            segment.onmousemove = (e) => {
+                                tooltip.style.left = (e.clientX + 15) + 'px';
+                                tooltip.style.top = (e.clientY + 15) + 'px';
+                            };
+                            segment.onmouseleave = () => tooltip.style.display = 'none';
+
+                            barContainer.appendChild(segment);
+                        });
+                    });
+                    
+                    gRow.appendChild(barContainer);
                 }
                 chart.appendChild(gRow);
             });
+
+            chart.onmousemove = (e) => {
+                if (!isCursorActive) return;
+                const rect = chart.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                inspectLine.style.left = x + 'px';
+                
+                let targetDate = new Date(dateStart.getTime());
+                if (currentScale === 'daily') {
+                    const dayIndex = Math.floor(x / cellWidth);
+                    targetDate.setDate(targetDate.getDate() + dayIndex);
+                } else {
+                    const monthIndex = Math.floor(x / cellWidth);
+                    targetDate.setMonth(targetDate.getMonth() + monthIndex);
+                    const remainderX = x % cellWidth;
+                    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+                    const dayInMonth = Math.floor((remainderX / cellWidth) * daysInMonth) + 1;
+                    targetDate.setDate(dayInMonth);
+                }
+                document.getElementById('inspect-marker').innerText = targetDate.toISOString().split('T')[0];
+            };
+
+            chart.onclick = (e) => {
+                if (!isCursorActive) return;
+                const rect = chart.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                let targetDate = new Date(dateStart.getTime());
+                if (currentScale === 'daily') {
+                    const dayIndex = Math.floor(x / cellWidth);
+                    targetDate.setDate(targetDate.getDate() + dayIndex);
+                } else {
+                    const monthIndex = Math.floor(x / cellWidth);
+                    targetDate.setMonth(targetDate.getMonth() + monthIndex);
+                    const remainderX = x % cellWidth;
+                    const daysInMonth = new Date(targetDate.getFullYear(), targetDate.getMonth() + 1, 0).getDate();
+                    const dayInMonth = Math.floor((remainderX / cellWidth) * daysInMonth) + 1;
+                    targetDate.setDate(dayInMonth);
+                }
+                addInspectionBlock(targetDate, x);
+            };
         }
+
+        function varRowHeight() {
+            return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row-height')) || 50;
+        }
+
+        function updateTodayBlock() {
+            if (!currentData) return;
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const tasks = findTasksForDate(today);
+            const block = document.getElementById('today-inspection-block');
+            if (block) block.innerHTML = generateBlockContent(tasks, today.toISOString().split('T')[0], 'HOY', null);
+        }
+
+        function findTasksForDate(date) {
+            let tasks = [];
+            if (!currentData) return tasks;
+            const target = new Date(date.getTime());
+            target.setHours(0,0,0,0);
+            currentData.madres.forEach(m => {
+                const mS = parseCleanDate(m.inicio);
+                const mE = parseCleanDate(m.fin);
+                if (mS && mE && target >= mS && target <= mE) {
+                    let activeHijas = m.hijas.filter(h => {
+                        const hS = parseCleanDate(h.inicio);
+                        const hE = parseCleanDate(h.fin);
+                        return hS && hE && target >= hS && target <= hE;
+                    });
+                    if (activeHijas.length > 0) tasks.push({ mother: m, hijas: activeHijas });
+                }
+            });
+            return tasks;
+        }
+
+        function generateBlockContent(tasks, dateStr, label, id) {
+            let isPrimary = label === 'CORTE' || label === 'HOY';
+            let html = `<div class="p-4 border-b border-slate-100 flex justify-between items-start ${isPrimary ? 'bg-emerald-50' : 'bg-slate-50'} rounded-t-2xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-6 h-6 ${isPrimary ? 'bg-emerald-600' : 'bg-indigo-600'} text-white rounded-full flex items-center justify-center text-[10px] font-black">${id || '★'}</div>
+                    <div>
+                        <div class="text-[9px] font-black ${isPrimary ? 'text-emerald-600' : 'text-indigo-500'} uppercase tracking-widest">${label}</div>
+                        <div class="text-xs font-black text-slate-800">${dateStr}</div>
+                    </div>
+                </div>
+                ${id ? `<button onclick="removeBlock(${id})" class="text-slate-400 hover:text-red-500"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2"></path></svg></button>` : ''}
+            </div><div class="p-4 overflow-y-auto max-h-[300px] space-y-3">`;
+            if (tasks.length === 0) html += `<p class="text-[10px] text-slate-400 italic text-center py-4">Sin tareas activas</p>`;
+            else tasks.forEach(t => {
+                html += `<div class="border-b border-slate-50 pb-2 last:border-0">
+                    <div class="flex items-center gap-2 mb-1"><span class="text-[8px] bg-slate-100 px-1.5 py-0.5 rounded font-bold">${t.mother.id}</span><span class="text-[10px] font-black text-slate-700 uppercase truncate">${t.mother.nombre}</span></div>
+                    ${t.hijas.map(h => `<div class="ml-4 flex justify-between text-[10px] text-slate-500"><span>• ${h.nombre}</span><span class="font-bold text-slate-800">${h.progreso}%</span></div>`).join('')}
+                </div>`;
+            });
+            html += `</div>`;
+            return html;
+        }
+
+        function addBlockByManualDate() {
+            const input = document.getElementById('manualDateInput');
+            if (!input || !input.value || !currentData) return;
+            const date = parseCleanDate(input.value);
+            const x = getLeftPos(date, currentData.start, currentScale === 'daily' ? 40 : 120);
+            addInspectionBlock(date, x);
+        }
+
+        function addInspectionBlock(date, xPosition) {
+            blockCounter++;
+            const currentBlockId = blockCounter;
+            const dateStr = date.toISOString().split('T')[0];
+
+            // Guardar en el historial para persistencia
+            inspectionHistory.push({ id: currentBlockId, date: new Date(date.getTime()) });
+
+            const fLine = document.createElement('div');
+            fLine.className = 'fixed-inspect-line';
+            fLine.id = `fixed-line-${currentBlockId}`;
+            fLine.style.left = xPosition + 'px';
+            fLine.innerHTML = `<div class="fixed-marker-id">${currentBlockId}</div>`;
+            document.getElementById('fixed-lines-container').appendChild(fLine);
+
+            const block = document.createElement('div');
+            block.className = 'inspection-block';
+            block.id = `block-${currentBlockId}`;
+            block.innerHTML = generateBlockContent(findTasksForDate(date), dateStr, 'Inspección', currentBlockId);
+            document.getElementById('inspection-list-container').append(block);
+        }
+
+        function removeBlock(id) {
+            document.getElementById(`block-${id}`)?.remove();
+            document.getElementById(`fixed-line-${id}`)?.remove();
+            inspectionHistory = inspectionHistory.filter(insp => insp.id !== id);
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'LOAD_TXT') {
+                currentData = parseGanttData(event.data.content);
+                renderGantt();
+                updateTodayBlock();
+            }
+        });
     </script>
 </body>
 </html>
