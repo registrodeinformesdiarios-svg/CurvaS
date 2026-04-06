@@ -134,6 +134,11 @@
                     </div>
                     
                     <div class="flex flex-wrap items-center gap-4 text-sm bg-gray-50 p-2 rounded-lg border border-gray-100 no-print">
+                        <button onclick="exportChartCSV()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-semibold transition" title="Exportar datos del gráfico en formato CSV para importar en otra plataforma">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Exportar CSV Gráfico
+                        </button>
+                        <div class="h-6 w-px bg-gray-300"></div>
                         <div class="flex items-center gap-2">
                             <span class="text-[10px] uppercase font-bold text-gray-400">Escala Y:</span>
                             <input type="number" id="manualMinY" placeholder="Min" onchange="renderSCurve()" class="w-16 border rounded px-1 text-center bg-white" title="Mínimo manual eje Y">
@@ -886,6 +891,72 @@
                     }
                 }, 300);
             }
+        }
+
+        function exportChartCSV() {
+            const viewStart = document.getElementById('filterDateStart').value;
+            const viewEnd = document.getElementById('filterDateEnd').value;
+            if (!viewStart || !viewEnd) { showStatus('Defina el rango de fechas del gráfico primero.', 'error'); return; }
+
+            // Reconstruir las mismas etiquetas que usa renderSCurve
+            const startDate = new Date(viewStart);
+            const endDate = new Date(viewEnd);
+            const dateList = [];
+            let current = new Date(startDate);
+            while (current <= endDate) {
+                dateList.push(current.toISOString().split('T')[0]);
+                current.setDate(current.getDate() + 3);
+            }
+            const finalStr = endDate.toISOString().split('T')[0];
+            if (!dateList.includes(finalStr)) dateList.push(finalStr);
+            const allLabels = [...new Set([...dateList, ...projectData.fechasCorte])]
+                .filter(d => d >= viewStart && d <= viewEnd).sort();
+
+            const today = projectData.fechaActual;
+            const realPoints = [], planPoints = [];
+
+            allLabels.forEach(fecha => {
+                let sumReal = 0, sumPlan = 0, totalTasks = 0;
+                const dActual = new Date(fecha);
+                projectData.grupos.forEach(g => {
+                    g.tareas.forEach(t => {
+                        totalTasks++;
+                        let rVal = 0;
+                        const cutIdx = projectData.fechasCorte.indexOf(fecha);
+                        if (cutIdx !== -1) rVal = t.avances[cutIdx] || 0;
+                        else {
+                            let lastVal = 0;
+                            for (let i = 0; i < projectData.fechasCorte.length; i++) {
+                                if (projectData.fechasCorte[i] <= fecha) lastVal = t.avances[i] || 0;
+                                else break;
+                            }
+                            rVal = lastVal;
+                        }
+                        sumReal += rVal;
+                        const dStart = new Date(t.inicio), dEnd = new Date(t.fin);
+                        if (dActual >= dEnd) sumPlan += 100;
+                        else if (dActual > dStart) sumPlan += ((dActual - dStart) / (dEnd - dStart)) * 100;
+                    });
+                });
+                realPoints.push(totalTasks > 0 ? parseFloat((sumReal / totalTasks).toFixed(2)) : 0);
+                planPoints.push(totalTasks > 0 ? parseFloat((sumPlan / totalTasks).toFixed(2)) : 0);
+            });
+
+            // Formato CSV compatible con el importador:
+            // Primera fila: etiquetas (Fecha,label1,label2,...)
+            // Fila Planificado: Planificado,val1,val2,...
+            // Fila Real: Avance Real,val1,val2,... (solo hasta hoy)
+            const labelRow = 'Fecha,' + allLabels.join(',');
+            const planRow = 'Planificado,' + planPoints.join(',');
+            const realRow = 'Avance Real,' + allLabels.map((f, i) => f <= today ? realPoints[i] : '').join(',');
+
+            const csvContent = [labelRow, planRow, realRow].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/plain' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = getFormattedFileName('txt').replace('.txt', '_grafico.txt');
+            a.click();
+            showStatus('CSV del gráfico exportado correctamente.');
         }
 
         function downloadUpdatedTxt() {
