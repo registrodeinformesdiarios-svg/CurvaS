@@ -120,6 +120,13 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                         Bajar TXT
                     </button>
+                    <button onclick="openChartUpload()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]" title="Subir gráfico a Drive">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Subir a Drive
+                    </button>
+                    <button onclick="openSettings()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]" title="Ajustes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -219,8 +226,186 @@
         </div>
     </div>
 
+    <!-- ===== SETTINGS MODAL ===== -->
+    <div id="settingsModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    Ajustes
+                </h2>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <!-- Tab bar -->
+            <div class="flex border-b px-6 gap-1 bg-gray-50">
+                <button onclick="showSettingsTab('drive')" id="stab-drive" class="settings-tab active px-4 py-2 text-sm font-medium border-b-2 border-blue-600 text-blue-600">Drive</button>
+                <button onclick="showSettingsTab('carga')" id="stab-carga" class="settings-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Carga Auto</button>
+                <button onclick="showSettingsTab('grafico')" id="stab-grafico" class="settings-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Gráfico</button>
+                <button onclick="showSettingsTab('export')" id="stab-export" class="settings-tab px-4 py-2 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700">Importar/Exportar</button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 py-5">
+                <!-- TAB: Drive -->
+                <div id="stab-content-drive" class="settings-tab-content space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">URL del App Script (Google Drive)</label>
+                        <input id="setting-gdApiUrl" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none font-mono" placeholder="https://script.google.com/macros/s/...">
+                        <p class="text-xs text-gray-400 mt-1">URL del Web App de Google Apps Script desplegado como acceso público.</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">URL App Script para Gráficos (carpeta separada)</label>
+                        <input id="setting-gdChartsFolderUrl" type="text" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none font-mono" placeholder="https://script.google.com/macros/s/... (dejar vacío para usar el mismo)">
+                        <p class="text-xs text-gray-400 mt-1">Si dejás vacío, se usará el mismo script principal. Podés apuntar a un script con una carpeta diferente.</p>
+                    </div>
+                </div>
+                <!-- TAB: Carga Auto -->
+                <div id="stab-content-carga" class="settings-tab-content hidden space-y-4">
+                    <div class="flex items-center justify-between bg-blue-50 rounded-lg p-4 border border-blue-100">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Cargar automáticamente al abrir</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Al abrir la página, carga automáticamente el último archivo de Drive.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-autoLoad" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Archivo a cargar</label>
+                        <select id="setting-autoLoadTarget" class="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 outline-none">
+                            <option value="latest">Último archivo (por nombre, orden descendente)</option>
+                        </select>
+                        <p class="text-xs text-gray-400 mt-1">Los archivos se ordenan por nombre; con el prefijo de fecha AAAAMMDD el más reciente queda primero.</p>
+                    </div>
+                </div>
+                <!-- TAB: Gráfico -->
+                <div id="stab-content-grafico" class="settings-tab-content hidden space-y-4">
+                    <div class="flex items-center justify-between bg-purple-50 rounded-lg p-4 border border-purple-100">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Fechas dispersas en gráficos exportados</p>
+                            <p class="text-xs text-gray-500 mt-0.5">Al generar el bloque &lt;grafico&gt;, omite etiquetas intermedias para no saturar el eje X.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="setting-chartSparseDates" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        </label>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Máx. etiquetas visibles en eje X del gráfico</label>
+                        <input id="setting-chartMaxTicks" type="number" min="4" max="30" class="w-32 border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none">
+                        <p class="text-xs text-gray-400 mt-1">Las etiquetas intermedias se dejan vacías ("") para no mostrarlas en la mayoría de motores de gráfico.</p>
+                    </div>
+                </div>
+                <!-- TAB: Importar/Exportar -->
+                <div id="stab-content-export" class="settings-tab-content hidden space-y-4">
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Exportar ajustes</p>
+                        <button onclick="exportSettings()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+                            ⬇ Descargar ajustes.json
+                        </button>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Importar ajustes</p>
+                        <input type="file" id="importSettingsFile" accept=".json" class="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <button onclick="importSettings()" class="mt-2 bg-gray-600 hover:bg-gray-700 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+                            ⬆ Aplicar ajustes importados
+                        </button>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <p class="text-sm font-semibold text-red-700 mb-1">Restablecer ajustes</p>
+                        <p class="text-xs text-red-500 mb-2">Borra todos los ajustes guardados y vuelve a los valores predeterminados.</p>
+                        <button onclick="resetSettings()" class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-lg font-medium transition">
+                            🔄 Restablecer
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t flex justify-end gap-2">
+                <button onclick="closeSettings()" class="text-sm text-gray-500 px-4 py-2 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                <button onclick="applySettings()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm px-5 py-2 rounded-lg font-semibold transition">Guardar ajustes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CHART UPLOAD MODAL ===== -->
+    <div id="chartUploadModal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl mx-4 flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b">
+                <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Subir Gráfico a Drive
+                </h2>
+                <button onclick="closeChartUpload()" class="text-gray-400 hover:text-gray-600 p-1 rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">ID del gráfico</label>
+                        <input id="chartId" type="text" value="gs1" class="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del gráfico</label>
+                        <input id="chartName" type="text" placeholder="Ej: Curva S Avance" class="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
+                        <select id="chartType" class="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400">
+                            <option value="line">Línea (line)</option>
+                            <option value="bar">Barras (bar)</option>
+                            <option value="area">Área (area)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nombre del archivo</label>
+                        <input id="chartFileName" type="text" placeholder="grafico_curvaS" class="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-purple-400">
+                        <p class="text-[10px] text-gray-400 mt-0.5">Sin extensión. Se guardará como .txt</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Series (colores y datos)</label>
+                    <div id="chartSeriesList" class="space-y-2"></div>
+                    <button onclick="addChartSerie()" class="mt-2 text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-1.5 rounded-lg font-semibold transition">+ Agregar serie</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Vista previa del bloque</label>
+                    <pre id="chartPreview" class="bg-gray-50 border rounded-lg p-3 text-xs font-mono text-gray-700 overflow-x-auto whitespace-pre-wrap max-h-48"></pre>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t flex justify-between items-center gap-2">
+                <button onclick="refreshChartPreview()" class="text-sm text-gray-500 px-4 py-2 hover:bg-gray-100 rounded-lg">↺ Actualizar preview</button>
+                <div class="flex gap-2">
+                    <button onclick="closeChartUpload()" class="text-sm text-gray-500 px-4 py-2 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                    <button id="btnUploadChart" onclick="uploadChartToDrive()" class="bg-purple-600 hover:bg-purple-700 text-white text-sm px-5 py-2 rounded-lg font-semibold transition flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        Subir a Drive
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const GD_API_URL = 'https://script.google.com/macros/s/AKfycbzzCEA1mr_hNDRAX1irmR6cTO9XwInntFaxxWuOEfyd3SGNvOGL4pItMsnnaSG2_Oox/exec';
+        // ---- SETTINGS ----
+        const DEFAULT_SETTINGS = {
+            gdApiUrl: 'https://script.google.com/macros/s/AKfycbzzCEA1mr_hNDRAX1irmR6cTO9XwInntFaxxWuOEfyd3SGNvOGL4pItMsnnaSG2_Oox/exec',
+            gdChartsFolderUrl: '',
+            autoLoad: true,
+            autoLoadTarget: 'latest', // 'latest' | specific file id
+            chartSparseDates: true,
+            chartMaxTicks: 12
+        };
+        function loadSettings() {
+            try { return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem('pmSettings') || '{}')); }
+            catch(e) { return { ...DEFAULT_SETTINGS }; }
+        }
+        function saveSettings(s) { localStorage.setItem('pmSettings', JSON.stringify(s)); }
+        let appSettings = loadSettings();
+        function getApiUrl() { return appSettings.gdApiUrl || DEFAULT_SETTINGS.gdApiUrl; }
 
         let rawTxtContent = null; // Guarda el texto del último TXT cargado
 
@@ -241,7 +426,7 @@
         document.getElementById('customSnapshotDate').value = projectData.fechaActual;
         document.getElementById('fileInput').addEventListener('change', handleFile);
 
-        window.onload = refreshDriveList;
+        window.onload = () => refreshDriveList(true);
 
         function getDynamicDatePrefix() {
             const today = new Date();
@@ -265,12 +450,14 @@
             setTimeout(() => banner.classList.add('translate-y-20'), 4000);
         }
 
-        async function refreshDriveList() {
+        async function refreshDriveList(triggerAutoLoad = false) {
             const select = document.getElementById('driveFilesList');
             select.innerHTML = '<option value="">Buscando archivos...</option>';
             try {
-                const response = await fetch(`${GD_API_URL}?action=list`);
+                const response = await fetch(`${getApiUrl()}?action=list`);
                 const files = await response.json();
+                // Ordenar por nombre descendente (más reciente primero por prefijo de fecha)
+                files.sort((a, b) => b.name.localeCompare(a.name));
                 select.innerHTML = '<option value="">-- Abrir desde Drive --</option>';
                 if (files.length === 0) {
                     select.innerHTML = '<option value="">No hay archivos</option>';
@@ -281,6 +468,17 @@
                         opt.innerText = f.name;
                         select.appendChild(opt);
                     });
+                    // Auto-cargar el último archivo si está habilitado
+                    if (triggerAutoLoad && appSettings.autoLoad) {
+                        const targetId = appSettings.autoLoadTarget === 'latest' ? files[0].id : appSettings.autoLoadTarget;
+                        const targetFile = files.find(f => f.id === targetId) || files[0];
+                        if (targetFile) {
+                            showStatus(`Auto-cargando: ${targetFile.name}...`);
+                            await loadFromDrive(targetFile.id, false);
+                            // Seleccionar el archivo en el dropdown
+                            select.value = targetFile.id;
+                        }
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -288,11 +486,11 @@
             }
         }
 
-        async function loadFromDrive(fileId) {
+        async function loadFromDrive(fileId, resetSelect = true) {
             if (!fileId) return;
             showStatus("Descargando archivo...");
             try {
-                const response = await fetch(`${GD_API_URL}?action=download&id=${fileId}`);
+                const response = await fetch(`${getApiUrl()}?action=download&id=${fileId}`);
                 const content = await response.text();
                 pendingProgress = {};
                 parseTxt(content);
@@ -300,8 +498,7 @@
                 setDefaultFilters();
                 renderAll();
                 showStatus("Proyecto cargado correctamente");
-                // Resetear el select para permitir recargar el mismo archivo
-                document.getElementById('driveFilesList').value = '';
+                if (resetSelect) document.getElementById('driveFilesList').value = '';
             } catch (err) {
                 console.error(err);
                 showStatus("Error al descargar el archivo", "error");
@@ -316,7 +513,7 @@
             const content = generateTxtString();
             const fileName = getFormattedFileName('txt');
             try {
-                const response = await fetch(GD_API_URL, {
+                const response = await fetch(getApiUrl(), {
                     method: 'POST',
                     mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/json' },
@@ -938,17 +1135,17 @@
                         else if (dActual > dStart) sumPlan += ((dActual - dStart) / (dEnd - dStart)) * 100;
                     });
                 });
-                realPoints.push(totalTasks > 0 ? parseFloat((sumReal / totalTasks).toFixed(2)) : 0);
+                realPoints.push(totalTasks > 0 && fecha <= today ? parseFloat((sumReal / totalTasks).toFixed(2)) : null);
                 planPoints.push(totalTasks > 0 ? parseFloat((sumPlan / totalTasks).toFixed(2)) : 0);
             });
 
             // Formato CSV compatible con el importador:
             // Primera fila: etiquetas (Fecha,label1,label2,...)
             // Fila Planificado: Planificado,val1,val2,...
-            // Fila Real: Avance Real,val1,val2,... (solo hasta hoy)
+            // Fila Real: Avance Real,val1,val2,... (solo hasta hoy, sin ceros futuros)
             const labelRow = 'Fecha,' + allLabels.join(',');
             const planRow = 'Planificado,' + planPoints.join(',');
-            const realRow = 'Avance Real,' + allLabels.map((f, i) => f <= today ? realPoints[i] : '').join(',');
+            const realRow = 'Avance Real,' + allLabels.map((f, i) => realPoints[i] !== null ? realPoints[i] : '').join(',');
 
             const csvContent = [labelRow, planRow, realRow].join('\n');
             const blob = new Blob([csvContent], { type: 'text/plain' });
@@ -977,6 +1174,304 @@
                 pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
             };
             html2pdf().set(opt).from(element).save().then(() => { noPrintElements.forEach(el => el.style.display = ''); });
+        }
+
+        // ========== SETTINGS LOGIC ==========
+        function openSettings() {
+            // Poblar campos con valores actuales
+            document.getElementById('setting-gdApiUrl').value = appSettings.gdApiUrl || '';
+            document.getElementById('setting-gdChartsFolderUrl').value = appSettings.gdChartsFolderUrl || '';
+            document.getElementById('setting-autoLoad').checked = appSettings.autoLoad !== false;
+            document.getElementById('setting-chartSparseDates').checked = appSettings.chartSparseDates !== false;
+            document.getElementById('setting-chartMaxTicks').value = appSettings.chartMaxTicks || 12;
+            // Poblar el select de auto-load con archivos actuales
+            populateAutoLoadSelect();
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        async function populateAutoLoadSelect() {
+            const sel = document.getElementById('setting-autoLoadTarget');
+            sel.innerHTML = '<option value="latest">Último archivo (orden descendente por nombre)</option>';
+            try {
+                const response = await fetch(`${getApiUrl()}?action=list`);
+                const files = await response.json();
+                files.sort((a, b) => b.name.localeCompare(a.name));
+                files.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.innerText = f.name;
+                    sel.appendChild(opt);
+                });
+                sel.value = appSettings.autoLoadTarget || 'latest';
+            } catch(e) {}
+        }
+
+        function showSettingsTab(tab) {
+            document.querySelectorAll('.settings-tab').forEach(t => {
+                t.classList.remove('border-blue-600', 'text-blue-600');
+                t.classList.add('border-transparent', 'text-gray-500');
+            });
+            document.querySelectorAll('.settings-tab-content').forEach(c => c.classList.add('hidden'));
+            const btn = document.getElementById(`stab-${tab}`);
+            btn.classList.add('border-blue-600', 'text-blue-600');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+            document.getElementById(`stab-content-${tab}`).classList.remove('hidden');
+        }
+
+        function applySettings() {
+            appSettings.gdApiUrl = document.getElementById('setting-gdApiUrl').value.trim();
+            appSettings.gdChartsFolderUrl = document.getElementById('setting-gdChartsFolderUrl').value.trim();
+            appSettings.autoLoad = document.getElementById('setting-autoLoad').checked;
+            appSettings.autoLoadTarget = document.getElementById('setting-autoLoadTarget').value;
+            appSettings.chartSparseDates = document.getElementById('setting-chartSparseDates').checked;
+            appSettings.chartMaxTicks = parseInt(document.getElementById('setting-chartMaxTicks').value) || 12;
+            saveSettings(appSettings);
+            closeSettings();
+            showStatus('Ajustes guardados correctamente.');
+        }
+
+        function exportSettings() {
+            const blob = new Blob([JSON.stringify(appSettings, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'pm_ajustes.json';
+            a.click();
+        }
+
+        function importSettings() {
+            const file = document.getElementById('importSettingsFile').files[0];
+            if (!file) { showStatus('Selecciona un archivo .json primero.', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    appSettings = Object.assign({}, DEFAULT_SETTINGS, imported);
+                    saveSettings(appSettings);
+                    openSettings(); // recargar campos
+                    showStatus('Ajustes importados correctamente.');
+                } catch(err) {
+                    showStatus('Error al leer el archivo JSON.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetSettings() {
+            if (!confirm('¿Restablecer todos los ajustes a los valores predeterminados?')) return;
+            localStorage.removeItem('pmSettings');
+            appSettings = loadSettings();
+            openSettings();
+            showStatus('Ajustes restablecidos.');
+        }
+
+        // ========== CHART UPLOAD LOGIC ==========
+        const CHART_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#f97316','#14b8a6'];
+
+        function openChartUpload() {
+            // Precargar series basadas en la curva S actual
+            const seriesList = document.getElementById('chartSeriesList');
+            seriesList.innerHTML = '';
+            // Preset con Planificado y Real
+            const presets = [
+                { name: 'Planificado', color: '#3b82f6' },
+                { name: 'Avance Real', color: '#22c55e' }
+            ];
+            presets.forEach(p => addChartSerie(p.name, p.color));
+            // Precargar nombre de archivo
+            document.getElementById('chartFileName').value = getFormattedFileName('txt').replace('.txt','_grafico');
+            document.getElementById('chartName').value = projectData.nombreProyecto || '';
+            refreshChartPreview();
+            document.getElementById('chartUploadModal').classList.remove('hidden');
+        }
+
+        function closeChartUpload() {
+            document.getElementById('chartUploadModal').classList.add('hidden');
+        }
+
+        function addChartSerie(name = '', color = '') {
+            const seriesList = document.getElementById('chartSeriesList');
+            const idx = seriesList.children.length;
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2 serie-row';
+            div.innerHTML = `
+                <input type="color" value="${color || CHART_COLORS[idx % CHART_COLORS.length]}" class="w-8 h-8 rounded cursor-pointer border serie-color" title="Color">
+                <input type="text" value="${name}" placeholder="Nombre de la serie" class="flex-1 border rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-purple-400 serie-name">
+                <button onclick="this.closest('.serie-row').remove(); refreshChartPreview();" class="text-red-400 hover:text-red-600 p-1" title="Eliminar">✕</button>
+            `;
+            div.querySelector('.serie-color').addEventListener('input', refreshChartPreview);
+            div.querySelector('.serie-name').addEventListener('input', refreshChartPreview);
+            seriesList.appendChild(div);
+            refreshChartPreview();
+        }
+
+        // Interpola la spline cúbica de Chart.js (tension=0.4) entre puntos conocidos.
+        // Dado un array de {x, y} con nulos/vacíos en los intermedios, devuelve todos los valores interpolados.
+        function interpolateSpline(labels, rawValues, tension) {
+            // Recopilar solo los puntos con valor definido
+            const knownPts = [];
+            labels.forEach((lbl, i) => {
+                const v = rawValues[i];
+                if (v !== null && v !== '' && v !== undefined) knownPts.push({ i, v });
+            });
+            if (knownPts.length === 0) return rawValues.map(() => '');
+            if (knownPts.length === 1) return labels.map((_, i) => i === knownPts[0].i ? knownPts[0].v : '');
+
+            // Calcular tangentes de Catmull-Rom escaladas por tension (igual que Chart.js)
+            const t = tension;
+            const n = knownPts.length;
+            const tangents = knownPts.map((pt, k) => {
+                if (k === 0) return { m: (knownPts[1].v - pt.v) * t };
+                if (k === n - 1) return { m: (pt.v - knownPts[n-2].v) * t };
+                return { m: (knownPts[k+1].v - knownPts[k-1].v) * t };
+            });
+
+            // Interpolar cada label usando el segmento cúbico de Hermite correspondiente
+            const result = labels.map((_, li) => {
+                // Fuera del rango de puntos conocidos → vacío
+                if (li < knownPts[0].i || li > knownPts[n-1].i) return '';
+                // Encontrar el segmento k..k+1 que contiene li
+                let seg = n - 2;
+                for (let k = 0; k < n - 1; k++) {
+                    if (li <= knownPts[k+1].i) { seg = k; break; }
+                }
+                const p0 = knownPts[seg], p1 = knownPts[seg+1];
+                const span = p1.i - p0.i;
+                if (span === 0) return p0.v;
+                const u = (li - p0.i) / span;
+                const u2 = u * u, u3 = u2 * u;
+                // Hermite cúbico
+                const h00 = 2*u3 - 3*u2 + 1;
+                const h10 = u3 - 2*u2 + u;
+                const h01 = -2*u3 + 3*u2;
+                const h11 = u3 - u2;
+                const val = h00*p0.v + h10*span*tangents[seg].m + h01*p1.v + h11*span*tangents[seg+1].m;
+                return parseFloat(Math.max(0, Math.min(100, val)).toFixed(2));
+            });
+            return result;
+        }
+
+        function buildChartBlock() {
+            const id = document.getElementById('chartId').value.trim() || 'g1';
+            const nombre = document.getElementById('chartName').value.trim();
+            const tipo = document.getElementById('chartType').value;
+
+            // Obtener etiquetas (fechas de corte) con dispersión opcional
+            const viewStart = document.getElementById('filterDateStart').value;
+            const viewEnd = document.getElementById('filterDateEnd').value;
+            if (!viewStart || !viewEnd) return '(Defina el rango de fechas del gráfico primero)';
+
+            // Generar TODOS los días del rango para escala lineal correcta
+            const allDates = [];
+            { let cur = new Date(viewStart), endD = new Date(viewEnd);
+              while (cur <= endD) { allDates.push(cur.toISOString().split('T')[0]); cur.setDate(cur.getDate()+1); } }
+
+            // Distribuir uniformemente hasta 15 etiquetas en el rango completo
+            const MAX_LABELS = 15;
+            const n = allDates.length;
+            const selectedIndices = new Set();
+            if (n <= MAX_LABELS) {
+                allDates.forEach((_, i) => selectedIndices.add(i));
+            } else {
+                for (let k = 0; k < MAX_LABELS; k++) {
+                    selectedIndices.add(Math.round(k * (n - 1) / (MAX_LABELS - 1)));
+                }
+            }
+            let labelDates = allDates.map((d, i) => selectedIndices.has(i) ? d : '');
+
+            // Calcular valores para cada fecha
+            const today = projectData.fechaActual;
+            const planPoints = [], realPointsRaw = [];
+            allDates.forEach(fecha => {
+                let sumReal = 0, sumPlan = 0, totalTasks = 0;
+                const dActual = new Date(fecha);
+                projectData.grupos.forEach(g => {
+                    g.tareas.forEach(t => {
+                        totalTasks++;
+                        let rVal = 0;
+                        const cutIdx = projectData.fechasCorte.indexOf(fecha);
+                        if (cutIdx !== -1) rVal = t.avances[cutIdx] || 0;
+                        else {
+                            let lastVal = 0;
+                            for (let i = 0; i < projectData.fechasCorte.length; i++) {
+                                if (projectData.fechasCorte[i] <= fecha) lastVal = t.avances[i] || 0;
+                                else break;
+                            }
+                            rVal = lastVal;
+                        }
+                        sumReal += rVal;
+                        const dStart = new Date(t.inicio), dEnd = new Date(t.fin);
+                        if (dActual >= dEnd) sumPlan += 100;
+                        else if (dActual > dStart) sumPlan += ((dActual - dStart) / (dEnd - dStart)) * 100;
+                    });
+                });
+                planPoints.push(totalTasks > 0 ? parseFloat((sumPlan / totalTasks).toFixed(2)) : 0);
+                // Para real: solo valor en fechas de corte (y hoy si aplica), resto null para interpolar
+                const isCut = projectData.fechasCorte.includes(fecha);
+                realPointsRaw.push(totalTasks > 0 && fecha <= today && isCut ? parseFloat((sumReal / totalTasks).toFixed(2)) : (fecha <= today && isCut ? 0 : null));
+            });
+
+            // Interpolar la curva Real con la misma spline cúbica que usa el gráfico (tension=0.4)
+            const realPointsInterp = interpolateSpline(allDates, realPointsRaw, 0.4);
+            // Mantener vacío ('') para fechas futuras (después de hoy)
+            const realPoints = allDates.map((fecha, i) => fecha <= today ? realPointsInterp[i] : '');
+
+            // Obtener series configuradas por el usuario
+            const serieRows = document.querySelectorAll('.serie-row');
+            const seriesData = [];
+            serieRows.forEach((row, i) => {
+                const sname = row.querySelector('.serie-name').value.trim() || `Serie ${i+1}`;
+                const scolor = row.querySelector('.serie-color').value;
+                // Asignar datos según índice de serie (0 = planificado, 1 = real, el resto vacío)
+                let vals;
+                if (i === 0) vals = planPoints;
+                else if (i === 1) vals = realPoints;
+                else vals = allDates.map(() => 0);
+                seriesData.push({ name: sname, color: scolor, vals });
+            });
+
+            const etiquetasStr = labelDates.join(' | ');
+            const seriesStr = seriesData.map(s => {
+                let v = [...s.vals];
+                while (v.length > 0 && v[v.length - 1] === '') v.pop();
+                return `  ${s.name} | ${s.color} | ${v.join(' | ')}`;
+            }).join('\n');
+
+            return `<grafico id="${id}" nombre="${nombre}" tipo="${tipo}">\n  etiquetas: ${etiquetasStr}\n  ---\n${seriesStr}\n</grafico>`;
+        }
+
+        function refreshChartPreview() {
+            document.getElementById('chartPreview').textContent = buildChartBlock();
+        }
+
+        async function uploadChartToDrive() {
+            const content = buildChartBlock();
+            if (content.startsWith('(')) { showStatus(content, 'error'); return; }
+            let fileName = document.getElementById('chartFileName').value.trim();
+            if (!fileName) fileName = 'grafico';
+            if (!fileName.endsWith('.txt')) fileName += '.txt';
+            const btn = document.getElementById('btnUploadChart');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="loading-spinner"></div> Subiendo...';
+            const chartsUrl = appSettings.gdChartsFolderUrl || getApiUrl();
+            try {
+                await fetch(chartsUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: fileName, content: content })
+                });
+                showStatus(`Gráfico subido: ${fileName}`);
+                closeChartUpload();
+            } catch(err) {
+                showStatus('Error al subir el gráfico.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Subir a Drive';
+            }
         }
     </script>
 </body>
