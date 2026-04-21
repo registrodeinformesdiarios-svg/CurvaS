@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis de Tareas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --color-bg: #0f1117;
+            --color-surface: #181c27;
+            --color-border: #252b3a;
+            --color-text: #e2e8f0;
+            --color-muted: #64748b;
+            --color-done: #10b981;
+            --color-done-dim: #064e3b;
+            --color-lag: #f59e0b;
+            --color-lag-dim: #451a03;
+            --color-lag-critical: #ef4444;
+            --color-lag-critical-dim: #450a0a;
+            --color-accent: #3b82f6;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .mono { font-family: 'IBM Plex Mono', monospace; }
+
+        /* HEADER */
+        .header {
+            background: linear-gradient(135deg, #0f1117 0%, #1a1f2e 100%);
+            border-bottom: 1px solid var(--color-border);
+            padding: 20px 28px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #f1f5f9;
+        }
+
+        .header-sub {
+            font-size: 0.72rem;
+            color: var(--color-muted);
+            font-family: 'IBM Plex Mono', monospace;
+            margin-top: 2px;
+        }
+
+        /* STAT CARDS */
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            padding: 20px 28px 0;
+        }
+
+        .stat-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+        .stat-card.done::before { background: var(--color-done); }
+        .stat-card.lag::before { background: var(--color-lag); }
+        .stat-card.critical::before { background: var(--color-lag-critical); }
+        .stat-card.total::before { background: var(--color-accent); }
+
+        .stat-num {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 2rem;
+            font-weight: 600;
+            line-height: 1;
+        }
+        .stat-label { font-size: 0.72rem; color: var(--color-muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* SECTION HEADER */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 20px 28px 10px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+        .section-header:hover { background: rgba(255,255,255,0.02); border-radius: 8px; }
+
+        .section-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            letter-spacing: -0.01em;
+            flex: 1;
+        }
+
+        .section-count {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 600;
+        }
+
+        .chevron {
+            transition: transform 0.2s;
+            color: var(--color-muted);
+        }
+        .chevron.open { transform: rotate(180deg); }
+
+        /* TASK LIST */
+        .task-list {
+            padding: 0 28px 12px;
+            display: none;
+        }
+        .task-list.visible { display: block; }
+
+        .task-group-header {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--color-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 10px 0 6px;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 2px;
+        }
+
+        .task-row {
+            display: grid;
+            grid-template-columns: 1fr 80px 100px 100px 90px 90px 110px;
+            gap: 8px;
+            align-items: center;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            border: 1px solid transparent;
+            transition: background 0.12s, border-color 0.12s;
+        }
+
+        .task-row:hover { border-color: var(--color-border); }
+
+        .task-row.done-row { background: rgba(16, 185, 129, 0.05); }
+        .task-row.done-row:hover { background: rgba(16, 185, 129, 0.09); border-color: rgba(16, 185, 129, 0.2); }
+
+        .task-row.lag-row { background: rgba(245, 158, 11, 0.05); }
+        .task-row.lag-row:hover { background: rgba(245, 158, 11, 0.09); border-color: rgba(245, 158, 11, 0.2); }
+
+        .task-row.critical-row { background: rgba(239, 68, 68, 0.05); }
+        .task-row.critical-row:hover { background: rgba(239, 68, 68, 0.09); border-color: rgba(239, 68, 68, 0.2); }
+
+        .task-name { font-weight: 500; color: #f1f5f9; line-height: 1.3; }
+        .task-id { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--color-muted); }
+        .task-date { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--color-muted); }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+            white-space: nowrap;
+        }
+        .badge-done { background: var(--color-done-dim); color: var(--color-done); }
+        .badge-lag { background: var(--color-lag-dim); color: var(--color-lag); }
+        .badge-critical { background: var(--color-lag-critical-dim); color: var(--color-lag-critical); }
+        .badge-neutral { background: #1e293b; color: #94a3b8; }
+
+        .progress-bar-wrap {
+            background: #1e293b;
+            border-radius: 3px;
+            height: 6px;
+            overflow: hidden;
+            width: 100%;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+
+        .lag-days {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        /* TABLE HEADER */
+        .task-list-header {
+            display: grid;
+            grid-template-columns: 1fr 80px 100px 100px 90px 90px 110px;
+            gap: 8px;
+            padding: 6px 12px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--color-muted);
+            font-weight: 700;
+            border-bottom: 1px solid var(--color-border);
+            margin-bottom: 4px;
+        }
+
+        /* TOOLBAR */
+        .toolbar {
+            padding: 16px 28px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 7px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+            letter-spacing: 0.01em;
+        }
+        .btn-primary { background: var(--color-accent); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: var(--color-done); color: white; }
+        .btn-success:hover { background: #059669; }
+        .btn-warn { background: #d97706; color: white; }
+        .btn-warn:hover { background: #b45309; }
+        .btn-ghost { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+        .btn-ghost:hover { background: #252b3a; }
+
+        .separator { width: 1px; height: 28px; background: var(--color-border); }
+
+        /* CUTOFF selector */
+        .cutoff-select {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            color: var(--color-text);
+            border-radius: 7px;
+            padding: 7px 12px;
+            font-size: 0.78rem;
+            font-family: 'IBM Plex Mono', monospace;
+            outline: none;
+            cursor: pointer;
+        }
+        .cutoff-select:focus { border-color: var(--color-accent); }
+
+        .label-sm {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--color-muted);
+            font-weight: 700;
+        }
+
+        /* EMPTY STATE */
+        .empty-state {
+            text-align: center;
+            padding: 60px 28px;
+            color: var(--color-muted);
+        }
+        .empty-state svg { margin: 0 auto 16px; opacity: 0.4; }
+        .empty-state h3 { font-size: 1rem; font-weight: 600; color: var(--color-text); margin-bottom: 6px; }
+        .empty-state p { font-size: 0.8rem; }
+
+        /* PRINT STYLES */
+        @media print {
+            body { background: white; color: #111; }
+            .header { background: white; border-bottom: 2px solid #e2e8f0; position: static; }
+            .header-title { color: #111; }
+            .header-sub { color: #666; }
+            .toolbar { display: none !important; }
+            .stat-card { background: #f8fafc; border: 1px solid #e2e8f0; }
+            .stat-num { color: #111; }
+            .stat-label { color: #666; }
+            .section-header { background: #f1f5f9 !important; }
+            .section-title { color: #111; }
+            .task-list { display: block !important; }
+            .task-list-header { color: #666; }
+            .task-name { color: #111; }
+            .task-date, .task-id { color: #666; }
+            .task-group-header { color: #888; }
+            .task-row { background: white !important; border-color: #e2e8f0 !important; }
+            .task-row.done-row { background: #f0fdf4 !important; }
+            .task-row.lag-row { background: #fffbeb !important; }
+            .task-row.critical-row { background: #fef2f2 !important; }
+            .badge-done { background: #d1fae5; color: #065f46; }
+            .badge-lag { background: #fef3c7; color: #92400e; }
+            .badge-critical { background: #fee2e2; color: #991b1b; }
+            .badge-neutral { background: #f1f5f9; color: #475569; }
+            .progress-bar-wrap { background: #e2e8f0; }
+            .chevron, .no-print { display: none !important; }
+            .section-count { background: #e2e8f0 !important; color: #111 !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <div class="header-title" id="headerTitle">📊 Análisis de Avance de Tareas</div>
+            <div class="header-sub mono" id="headerSub">Sin datos cargados</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;" class="no-print">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="label-sm">Corte:</span>
+                <select id="cutoffSelect" class="cutoff-select" onchange="renderAnalysis()">
+                    <option value="latest">Último corte</option>
+                </select>
+            </div>
+            <button class="btn btn-ghost" onclick="window.close()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                Cerrar
+            </button>
+        </div>
+    </div>
+
+    <div class="toolbar no-print">
+        <button class="btn btn-ghost" onclick="expandAll()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            Expandir todo
+        </button>
+        <button class="btn btn-ghost" onclick="collapseAll()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+            Plegar todo
+        </button>
+        <div class="separator"></div>
+        <button class="btn btn-primary" onclick="exportPDF()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Exportar PDF
+        </button>
+        <button class="btn btn-ghost" onclick="exportCSV()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV
+        </button>
+        <button class="btn btn-ghost" onclick="copyMarkdown()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copiar Markdown
+        </button>
+        <div class="separator"></div>
+        <button class="btn" id="btnCopyImg" style="background:#1e3a5f;color:#93c5fd;border:1px solid #2563eb;" title="Genera una tabla profesional de desfases y la copia como imagen para pegar en Word">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Copiar imagen de desfases
+        </button>
+    </div>
+
+    <div id="statGrid" class="stat-grid"></div>
+
+    <div id="mainContent" style="padding-bottom: 40px;">
+        <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <h3>Sin datos de proyecto</h3>
+            <p>Esperando datos del gestor de proyectos...</p>
+        </div>
+    </div>
+
+    <!-- TOAST -->
+    <div id="toast" style="position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:10px 18px;border-radius:8px;font-size:0.8rem;font-weight:600;transform:translateY(80px);transition:transform 0.3s;z-index:999;pointer-events:none;"></div>
+
+    <script>
+        let projectData = null;
+        let analysisState = { doneOpen: true, lagOpen: true };
+
+        // ======= RECIBIR DATOS DEL PADRE ========
+        window.addEventListener('message', (e) => {
+            if (e.data && e.data.type === 'LOAD_TXT') {
+                parseTxt(e.data.content);
+                buildCutoffSelector();
+                renderAnalysis();
+            }
+        });
+
+        // ======= PARSER (mismo formato que index16) ========
+        function parseTxt(content) {
+            const lines = content.split(/\r?\n/);
+            projectData = {
+                nombreProyecto: "Proyecto sin título",
+                fechasCorte: [],
+                grupos: []
+            };
+            let currentGroup = null, currentTask = null, inProyectoBlock = false;
+            for (let i = 0; i < lines.length; i++) {
+                const trimmed = lines[i].trim();
+                if (!trimmed) continue;
+                if (trimmed === '*Proyecto*') { inProyectoBlock = true; continue; }
+                if (inProyectoBlock) { projectData.nombreProyecto = trimmed; inProyectoBlock = false; continue; }
+                const dateMatch = trimmed.match(/^#(.*)#$/);
+                if (dateMatch) { projectData.fechasCorte.push(dateMatch[1]); continue; }
+                const groupMatch = trimmed.match(/^<([^<].*)>$/);
+                if (groupMatch) {
+                    currentGroup = { nombre: groupMatch[1], tareas: [] };
+                    projectData.grupos.push(currentGroup);
+                    continue;
+                }
+                const taskMatch = trimmed.match(/^<<(.+)>>\((.*)\)\((.*)\)\((.*)\)\((.*)\)$/);
+                if (taskMatch) {
+                    currentTask = { nombre: taskMatch[1], id: taskMatch[2], inicio: taskMatch[3], fin: taskMatch[4], predecesoras: taskMatch[5], avances: [] };
+                    if (currentGroup) currentGroup.tareas.push(currentTask);
+                    continue;
+                }
+                const progressMatch = trimmed.match(/^\((\d+)%\)$/);
+                if (progressMatch && currentTask) currentTask.avances.push(parseInt(progressMatch[1]));
+            }
+        }
+
+        function buildCutoffSelector() {
+            if (!projectData) return;
+            const sel = document.getElementById('cutoffSelect');
+            sel.innerHTML = '<option value="latest">Último corte</option>';
+            const sorted = [...projectData.fechasCorte].sort();
+            sorted.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f;
+                opt.textContent = f;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ======= ANÁLISIS PRINCIPAL ========
+        function getSelectedCutoffIndex() {
+            if (!projectData || projectData.fechasCorte.length === 0) return -1;
+            const selVal = document.getElementById('cutoffSelect').value;
+            if (selVal === 'latest') {
+                const sorted = [...projectData.fechasCorte].sort();
+                return projectData.fechasCorte.indexOf(sorted[sorted.length - 1]);
+            }
+            return projectData.fechasCorte.indexOf(selVal);
+        }
+
+        function getSelectedCutoffDate() {
+            const idx = getSelectedCutoffIndex();
+            if (idx === -1) return null;
+            return projectData.fechasCorte[idx];
+        }
+
+        function computePlanProgress(tarea, cutoffDate) {
+            if (!cutoffDate) return 0;
+            const dCut = new Date(cutoffDate);
+            const dStart = new Date(tarea.inicio);
+            const dEnd = new Date(tarea.fin);
+            if (dCut >= dEnd) return 100;
+            if (dCut <= dStart) return 0;
+            return parseFloat(((dCut - dStart) / (dEnd - dStart) * 100).toFixed(1));
+        }
+
+        function getAvanceAtCutoff(tarea, cutoffIdx) {
+            if (cutoffIdx === -1 || tarea.avances.length === 0) return 0;
+            return tarea.avances[cutoffIdx] !== undefined ? tarea.avances[cutoffIdx] : (tarea.avances[tarea.avances.length - 1] || 0);
+        }
+
+        function getDiasDesfase(tarea, realPct, cutoffDate) {
+            // Calcula cuántos días de desfase tiene la tarea respecto al plan
+            if (!cutoffDate) return 0;
+            const totalDias = Math.round((new Date(tarea.fin) - new Date(tarea.inicio)) / 86400000);
+            if (totalDias <= 0) return 0;
+            const planPct = computePlanProgress(tarea, cutoffDate);
+            const diff = planPct - realPct;
+            if (diff <= 0) return 0;
+            return Math.round((diff / 100) * totalDias);
+        }
+
+        function classifyTask(tarea, cutoffIdx) {
+            const cutoffDate = getSelectedCutoffDate();
+            const real = getAvanceAtCutoff(tarea, cutoffIdx);
+            const plan = computePlanProgress(tarea, cutoffDate);
+
+            // Terminada: avance = 100%
+            if (real >= 100) return { type: 'done', real, plan, desfase: 0 };
+
+            // Tarea que aún no debería haber empezado
+            if (plan === 0) return { type: 'pending', real, plan, desfase: 0 };
+
+            const desfaseDias = getDiasDesfase(tarea, real, cutoffDate);
+            const gap = plan - real;
+
+            if (gap <= 0) return { type: 'ontrack', real, plan, desfase: 0 };
+            if (gap > 15 || desfaseDias > 7) return { type: 'critical', real, plan, desfase: desfaseDias };
+            return { type: 'lag', real, plan, desfase: desfaseDias };
+        }
+
+        function renderAnalysis() {
+            if (!projectData) return;
+            const cutoffIdx = getSelectedCutoffIndex();
+            const cutoffDate = getSelectedCutoffDate();
+
+            document.getElementById('headerTitle').textContent = `📊 ${projectData.nombreProyecto} — Análisis de Avance`;
+            document.getElementById('headerSub').textContent = `Corte: ${cutoffDate || 'N/A'} · ${projectData.fechasCorte.length} corte(s) registrado(s)`;
+
+            // Clasificar tareas
+            const done = [], lagged = [], critical = [], ontrack = [], pending = [];
+            projectData.grupos.forEach(g => {
+                g.tareas.forEach(t => {
+                    const info = classifyTask(t, cutoffIdx);
+                    const entry = { tarea: t, grupo: g.nombre, ...info };
+                    if (info.type === 'done') done.push(entry);
+                    else if (info.type === 'critical') critical.push(entry);
+                    else if (info.type === 'lag') lagged.push(entry);
+                    else if (info.type === 'ontrack') ontrack.push(entry);
+                    else pending.push(entry);
+                });
+            });
+
+            // STAT CARDS
+            const totalTareas = done.length + lagged.length + critical.length + ontrack.length + pending.length;
+            // Incluir TODAS las tareas (pending con real=0 también) para coincidir con la Curva S
+            const avgReal = totalTareas > 0 ? Math.round([...done, ...lagged, ...critical, ...ontrack, ...pending].reduce((s, e) => s + e.real, 0) / totalTareas) : 0;
+            renderStats(done.length, lagged.length + critical.length, critical.length, totalTareas, avgReal);
+
+            // MAIN CONTENT
+            const container = document.getElementById('mainContent');
+            container.innerHTML = '';
+
+            // SECCIÓN TERMINADAS
+            renderSection(container, '✅ Tareas Terminadas', 'done', done, '#10b981', '#064e3b');
+            // SECCIÓN CON DESFASE (lag + critical juntos, ordenados por criticidad)
+            const allLagged = [...critical, ...lagged].sort((a, b) => b.desfase - a.desfase);
+            renderSection(container, '⚠️ Tareas con Desfase', 'lag', allLagged, '#f59e0b', '#451a03');
+
+            // Nota si hay tareas en curso/pendientes
+            if (ontrack.length > 0 || pending.length > 0) {
+                const note = document.createElement('div');
+                note.style.cssText = 'padding: 12px 28px; font-size: 0.75rem; color: #64748b;';
+                note.textContent = `ℹ️  ${ontrack.length} tarea(s) al día y ${pending.length} sin iniciar no se muestran en este análisis.`;
+                container.appendChild(note);
+            }
+        }
+
+        function renderStats(done, lagged, critical, total, avgReal) {
+            const grid = document.getElementById('statGrid');
+            grid.innerHTML = `
+                <div class="stat-card total">
+                    <div class="stat-num mono" style="color:#3b82f6">${total}</div>
+                    <div class="stat-label">Total Tareas</div>
+                </div>
+                <div class="stat-card done">
+                    <div class="stat-num mono" style="color:#10b981">${done}</div>
+                    <div class="stat-label">Terminadas</div>
+                </div>
+                <div class="stat-card lag">
+                    <div class="stat-num mono" style="color:#f59e0b">${lagged}</div>
+                    <div class="stat-label">Con Desfase</div>
+                </div>
+                <div class="stat-card critical">
+                    <div class="stat-num mono" style="color:#ef4444">${critical}</div>
+                    <div class="stat-label">Críticas</div>
+                </div>
+                <div class="stat-card total">
+                    <div class="stat-num mono" style="color:#a78bfa">${avgReal}%</div>
+                    <div class="stat-label">Avance Promedio</div>
+                </div>
+            `;
+        }
+
+        function renderSection(container, title, sectionKey, entries, color, bgColor) {
+            const isOpen = analysisState[sectionKey + 'Open'] !== false;
+
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-top: 18px;';
+
+            const header = document.createElement('div');
+            header.className = 'section-header';
+            header.style.cssText = `border-left: 3px solid ${color}; margin: 0 28px; border-radius: 0 6px 6px 0; padding-left: 14px;`;
+            header.onclick = () => {
+                analysisState[sectionKey + 'Open'] = !analysisState[sectionKey + 'Open'];
+                list.classList.toggle('visible');
+                chevron.classList.toggle('open');
+            };
+
+            const countColor = sectionKey === 'done' ? '#10b981' : '#f59e0b';
+            const chevron = document.createElement('span');
+            chevron.className = 'chevron' + (isOpen ? ' open' : '');
+            chevron.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>`;
+
+            header.innerHTML = `
+                <span class="section-dot" style="background:${color}"></span>
+                <span class="section-title">${title}</span>
+                <span class="section-count" style="background:${bgColor};color:${color}">${entries.length}</span>
+            `;
+            header.insertBefore(chevron, header.firstChild);
+
+            const list = document.createElement('div');
+            list.className = 'task-list' + (isOpen ? ' visible' : '');
+
+            if (entries.length === 0) {
+                list.innerHTML = `<div style="padding:16px 12px;color:#64748b;font-size:0.8rem;text-align:center;">No hay tareas en esta categoría.</div>`;
+            } else {
+                // Header de columnas
+                const colHeader = document.createElement('div');
+                colHeader.className = 'task-list-header';
+                colHeader.innerHTML = `
+                    <span>Nombre de Tarea</span>
+                    <span>ID</span>
+                    <span>Inicio</span>
+                    <span>Fin</span>
+                    <span>Real</span>
+                    <span>Plan</span>
+                    <span>${sectionKey === 'done' ? 'Estado' : 'Desfase'}</span>
+                `;
+                list.appendChild(colHeader);
+
+                // Agrupar por grupo
+                const byGroup = {};
+                entries.forEach(e => {
+                    if (!byGroup[e.grupo]) byGroup[e.grupo] = [];
+                    byGroup[e.grupo].push(e);
+                });
+
+                Object.entries(byGroup).forEach(([grpName, tasks]) => {
+                    if (Object.keys(byGroup).length > 1) {
+                        const gh = document.createElement('div');
+                        gh.className = 'task-group-header';
+                        gh.textContent = grpName;
+                        list.appendChild(gh);
+                    }
+
+                    tasks.forEach(entry => {
+                        const row = document.createElement('div');
+                        const rowClass = entry.type === 'done' ? 'done-row' : entry.type === 'critical' ? 'critical-row' : 'lag-row';
+                        row.className = `task-row ${rowClass}`;
+
+                        const barColor = entry.type === 'done' ? '#10b981' : entry.type === 'critical' ? '#ef4444' : '#f59e0b';
+                        const realPct = Math.min(100, Math.max(0, entry.real));
+                        const planPct = Math.min(100, Math.max(0, entry.plan));
+
+                        let rightCol = '';
+                        if (sectionKey === 'done') {
+                            rightCol = `<span class="badge badge-done">✔ Completa</span>`;
+                        } else {
+                            const badgeClass = entry.type === 'critical' ? 'badge-critical' : 'badge-lag';
+                            const icon = entry.type === 'critical' ? '🔴' : '🟡';
+                            rightCol = `<span class="badge ${badgeClass}">${icon} ${entry.desfase > 0 ? entry.desfase + ' día(s)' : 'Desfase'}</span>`;
+                        }
+
+                        row.innerHTML = `
+                            <div>
+                                <div class="task-name">${entry.tarea.nombre}</div>
+                                <div style="margin-top:4px;">
+                                    <div style="display:flex;align-items:center;gap:6px;">
+                                        <div class="progress-bar-wrap" style="flex:1;">
+                                            <div class="progress-bar-fill" style="width:${planPct}%;background:#334155;"></div>
+                                        </div>
+                                        <div class="progress-bar-wrap" style="flex:1;">
+                                            <div class="progress-bar-fill" style="width:${realPct}%;background:${barColor};"></div>
+                                        </div>
+                                    </div>
+                                    <div style="display:flex;gap:12px;margin-top:3px;">
+                                        <span style="font-size:0.62rem;color:#475569;">Plan: ${planPct}%</span>
+                                        <span style="font-size:0.62rem;color:${barColor};">Real: ${realPct}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="task-id">${entry.tarea.id}</div>
+                            <div class="task-date">${entry.tarea.inicio}</div>
+                            <div class="task-date">${entry.tarea.fin}</div>
+                            <div>
+                                <div style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;font-weight:700;color:${barColor};">${realPct}%</div>
+                            </div>
+                            <div>
+                                <div style="font-family:'IBM Plex Mono',monospace;font-size:0.82rem;color:#94a3b8;">${planPct}%</div>
+                            </div>
+                            <div>${rightCol}</div>
+                        `;
+                        list.appendChild(row);
+                    });
+                });
+            }
+
+            wrap.appendChild(header);
+            wrap.appendChild(list);
+            container.appendChild(wrap);
+        }
+
+        // ======= ACCIONES ========
+        function expandAll() {
+            analysisState.doneOpen = true;
+            analysisState.lagOpen = true;
+            renderAnalysis();
+        }
+        function collapseAll() {
+            analysisState.doneOpen = false;
+            analysisState.lagOpen = false;
+            renderAnalysis();
+        }
+
+        function exportPDF() {
+            // Expand all for export
+            const wasOpen = { done: analysisState.doneOpen, lag: analysisState.lagOpen };
+            analysisState.doneOpen = true;
+            analysisState.lagOpen = true;
+            renderAnalysis();
+
+            const cutoffDate = getSelectedCutoffDate() || 'sin-corte';
+            const fileName = `analisis_${(projectData?.nombreProyecto || 'proyecto').replace(/\s+/g, '_')}_${cutoffDate}.pdf`;
+
+            const el = document.body;
+            const opt = {
+                margin: [0.4, 0.4],
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.97 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(el).save().then(() => {
+                analysisState.doneOpen = wasOpen.done;
+                analysisState.lagOpen = wasOpen.lag;
+                renderAnalysis();
+                showToast('PDF exportado correctamente');
+            });
+        }
+
+        function exportCSV() {
+            if (!projectData) return;
+            const cutoffIdx = getSelectedCutoffIndex();
+            const cutoffDate = getSelectedCutoffDate();
+
+            let csv = 'Grupo,Tarea,ID,Inicio,Fin,Avance Real (%),Avance Plan (%),Desfase (días),Estado\n';
+
+            projectData.grupos.forEach(g => {
+                g.tareas.forEach(t => {
+                    const info = classifyTask(t, cutoffIdx);
+                    const planPct = computePlanProgress(t, cutoffDate);
+                    const statusLabel = { done: 'Terminada', lag: 'Con Desfase', critical: 'Crítica', ontrack: 'Al día', pending: 'Sin iniciar' }[info.type] || info.type;
+                    csv += `"${g.nombre}","${t.nombre}","${t.id}","${t.inicio}","${t.fin}",${info.real},${planPct.toFixed(1)},${info.desfase},"${statusLabel}"\n`;
+                });
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `analisis_${(projectData.nombreProyecto || 'proyecto').replace(/\s+/g, '_')}_${cutoffDate || 'sin-corte'}.csv`;
+            a.click();
+            showToast('CSV exportado correctamente');
+        }
+
+        function copyMarkdown() {
+            if (!projectData) return;
+            const cutoffIdx = getSelectedCutoffIndex();
+            const cutoffDate = getSelectedCutoffDate();
+
+            let md = `# Análisis de Avance — ${projectData.nombreProyecto}\n`;
+            md += `**Corte:** ${cutoffDate || 'N/A'}\n\n`;
+
+            // Estadísticas
+            const done = [], lagged = [], critical = [], ontrack = [], pending = [];
+            projectData.grupos.forEach(g => {
+                g.tareas.forEach(t => {
+                    const info = classifyTask(t, cutoffIdx);
+                    const entry = { tarea: t, grupo: g.nombre, ...info };
+                    if (info.type === 'done') done.push(entry);
+                    else if (info.type === 'critical') critical.push(entry);
+                    else if (info.type === 'lag') lagged.push(entry);
+                    else if (info.type === 'ontrack') ontrack.push(entry);
+                    else pending.push(entry);
+                });
+            });
+
+            const total = done.length + lagged.length + critical.length + ontrack.length + pending.length;
+            md += `## Resumen\n`;
+            md += `| Indicador | Valor |\n|---|---|\n`;
+            md += `| Total tareas | ${total} |\n`;
+            md += `| ✅ Terminadas | ${done.length} |\n`;
+            md += `| ⚠️ Con desfase | ${lagged.length + critical.length} |\n`;
+            md += `| 🔴 Críticas | ${critical.length} |\n\n`;
+
+            // Terminadas
+            if (done.length > 0) {
+                md += `## ✅ Tareas Terminadas\n\n`;
+                md += `| Grupo | Tarea | ID | Inicio | Fin |\n|---|---|---|---|---|\n`;
+                done.forEach(e => {
+                    md += `| ${e.grupo} | ${e.tarea.nombre} | ${e.tarea.id} | ${e.tarea.inicio} | ${e.tarea.fin} |\n`;
+                });
+                md += '\n';
+            }
+
+            // Con desfase
+            const allLagged = [...critical, ...lagged].sort((a, b) => b.desfase - a.desfase);
+            if (allLagged.length > 0) {
+                md += `## ⚠️ Tareas con Desfase\n\n`;
+                md += `| Grupo | Tarea | ID | Real (%) | Plan (%) | Desfase |\n|---|---|---|---|---|---|\n`;
+                allLagged.forEach(e => {
+                    const planPct = computePlanProgress(e.tarea, cutoffDate);
+                    const icon = e.type === 'critical' ? '🔴' : '🟡';
+                    md += `| ${e.grupo} | ${e.tarea.nombre} | ${e.tarea.id} | ${e.real}% | ${planPct.toFixed(1)}% | ${icon} ${e.desfase > 0 ? e.desfase + ' días' : 'Leve'} |\n`;
+                });
+                md += '\n';
+            }
+
+            navigator.clipboard.writeText(md).then(() => showToast('Markdown copiado al portapapeles'));
+        }
+
+        function showToast(msg, color) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.background = color || '#10b981';
+            t.style.transform = 'translateY(0)';
+            setTimeout(() => { t.style.transform = 'translateY(80px)'; }, 2800);
+        }
+
+        // ======= COPIAR TABLA DE DESFASES COMO IMAGEN =======
+        async function copyLagTableAsImage() {
+            if (!projectData) return;
+
+            const btn = document.getElementById('btnCopyImg');
+            btn.textContent = '⏳ Generando...';
+            btn.disabled = true;
+
+            const cutoffIdx = getSelectedCutoffIndex();
+            const cutoffDate = getSelectedCutoffDate();
+
+            // Recopilar solo tareas con desfase (lag + critical), ordenadas por desfase desc
+            const lagged = [], critical = [];
+            projectData.grupos.forEach(g => {
+                g.tareas.forEach(t => {
+                    const info = classifyTask(t, cutoffIdx);
+                    const entry = { tarea: t, grupo: g.nombre, ...info };
+                    if (info.type === 'critical') critical.push(entry);
+                    else if (info.type === 'lag') lagged.push(entry);
+                });
+            });
+            const rows = [...critical, ...lagged].sort((a, b) => b.desfase - a.desfase);
+
+            if (rows.length === 0) {
+                showToast('No hay tareas con desfase para exportar.', '#f59e0b');
+                btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Copiar imagen de desfases';
+                btn.disabled = false;
+                return;
+            }
+
+            // ---- CONSTANTES DE DISEÑO ----
+            const DPR       = 2;           // resolución retina para nitidez
+            const PAD       = 40;          // margen exterior
+            const TW        = 960;         // ancho lógico total
+            const ROW_H     = 38;          // altura de cada fila de datos
+            const HEAD_H    = 36;          // altura cabecera de columnas
+            const GRPH      = 54;          // altura del encabezado del grupo
+            const TITLE_H   = 72;          // altura bloque título
+            const FOOT_H    = 36;          // pie
+            const BAR_W     = 80;          // ancho barra progreso
+            const BAR_H     = 8;
+            const RADIUS    = 4;
+
+            // Colores modo claro profesional
+            const C = {
+                bg:          '#FFFFFF',
+                surface:     '#F8FAFC',
+                border:      '#E2E8F0',
+                borderLight: '#F1F5F9',
+                headerBg:    '#1E3A5F',
+                headerText:  '#FFFFFF',
+                titleText:   '#0F172A',
+                groupBg:     '#EFF6FF',
+                groupText:   '#1E40AF',
+                groupBorder: '#BFDBFE',
+                rowAlt:      '#FAFAFA',
+                cellText:    '#1E293B',
+                mutedText:   '#64748B',
+                critBg:      '#FFF1F2',
+                critText:    '#BE123C',
+                critBar:     '#EF4444',
+                critBadge:   '#FEE2E2',
+                lagBg:       '#FFFBEB',
+                lagText:     '#92400E',
+                lagBar:      '#F59E0B',
+                lagBadge:    '#FEF3C7',
+                planBar:     '#CBD5E1',
+                footBg:      '#F1F5F9',
+                footText:    '#64748B',
+                accent:      '#2563EB',
+            };
+
+            // Columnas: [label, x_offset, width, align]
+            const COLS = [
+                { l: 'TAREA',          x: 0,   w: 220, a: 'left'   },
+                { l: 'GRUPO',          x: 220, w: 150, a: 'left'   },
+                { l: 'ID',             x: 370, w: 55,  a: 'center' },
+                { l: 'INICIO',         x: 425, w: 85,  a: 'center' },
+                { l: 'FIN',            x: 510, w: 85,  a: 'center' },
+                { l: 'REAL',           x: 595, w: 55,  a: 'center' },
+                { l: 'PLAN',           x: 650, w: 55,  a: 'center' },
+                { l: 'BRECHA',         x: 705, w: 65,  a: 'center' },
+                { l: 'ESTADO',         x: 770, w: 110, a: 'center' },
+            ];
+            const INNER_W = TW - PAD * 2;
+
+            // Calcular altura total dinámica
+            // Agrupar filas por grupo para insertar cabeceras de grupo
+            const byGroup = {};
+            rows.forEach(r => {
+                if (!byGroup[r.grupo]) byGroup[r.grupo] = [];
+                byGroup[r.grupo].push(r);
+            });
+            const groupCount = Object.keys(byGroup).length;
+            const totalRows  = rows.length;
+            const totalH = PAD + TITLE_H + HEAD_H + (groupCount * GRPH) + (totalRows * ROW_H) + FOOT_H + PAD;
+
+            // Crear canvas
+            const canvas = document.createElement('canvas');
+            canvas.width  = TW  * DPR;
+            canvas.height = totalH * DPR;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(DPR, DPR);
+
+            // Helpers
+            function roundRect(x, y, w, h, r, fill, stroke) {
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+                ctx.lineTo(x + w, y + h - r);
+                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+                ctx.lineTo(x + r, y + h);
+                ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+                ctx.lineTo(x, y + r);
+                ctx.quadraticCurveTo(x, y, x + r, y);
+                ctx.closePath();
+                if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+                if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
+            }
+
+            function text(str, x, y, font, color, align = 'left', maxW) {
+                ctx.font = font;
+                ctx.fillStyle = color;
+                ctx.textAlign = align;
+                if (maxW) {
+                    // Truncar si es necesario
+                    let s = String(str);
+                    while (ctx.measureText(s).width > maxW && s.length > 3) s = s.slice(0, -1);
+                    if (s !== String(str)) s = s.slice(0, -1) + '…';
+                    ctx.fillText(s, x, y);
+                } else {
+                    ctx.fillText(String(str), x, y);
+                }
+            }
+
+            function progressBar(x, y, w, h, pct, color, bg) {
+                roundRect(x, y, w, h, h/2, bg, null);
+                if (pct > 0) roundRect(x, y, Math.max(h, w * Math.min(1, pct / 100)), h, h/2, color, null);
+            }
+
+            function badge(x, y, w, h, label, bg, fg) {
+                roundRect(x, y, w, h, 3, bg, null);
+                text(label, x + w/2, y + h/2 + 4, '500 10px "Segoe UI", Arial, sans-serif', fg, 'center');
+            }
+
+            // ---- FONDO GENERAL ----
+            ctx.fillStyle = C.bg;
+            ctx.fillRect(0, 0, TW, totalH);
+
+            // ---- TÍTULO ----
+            let cy = PAD;
+            // Barra azul lateral izquierda
+            roundRect(PAD, cy, 5, TITLE_H - 8, 2, C.accent, null);
+            text(projectData.nombreProyecto, PAD + 16, cy + 24, '700 18px "Segoe UI", Arial, sans-serif', C.titleText, 'left');
+            text('Tareas con Desfase de Avance', PAD + 16, cy + 46, '400 12px "Segoe UI", Arial, sans-serif', C.mutedText, 'left');
+            // Corte y fecha
+            const dateStr = `Corte de análisis: ${cutoffDate || 'N/A'}   ·   Generado: ${new Date().toLocaleDateString('es-CR', {day:'2-digit',month:'short',year:'numeric'})}`;
+            text(dateStr, TW - PAD, cy + 24, '400 11px "Segoe UI", Arial, sans-serif', C.mutedText, 'right');
+            // Contador
+            const countLabel = `${rows.length} tarea${rows.length !== 1 ? 's' : ''} (${critical.length} crítica${critical.length !== 1 ? 's' : ''}, ${lagged.length} con desfase leve)`;
+            text(countLabel, TW - PAD, cy + 44, '600 11px "Segoe UI", Arial, sans-serif', C.accent, 'right');
+
+            cy += TITLE_H;
+
+            // ---- CABECERA DE COLUMNAS ----
+            roundRect(PAD, cy, INNER_W, HEAD_H, RADIUS, C.headerBg, null);
+            COLS.forEach(col => {
+                const cx2 = PAD + col.x + (col.a === 'center' ? col.w / 2 : col.a === 'right' ? col.w : 8);
+                text(col.l, cx2, cy + HEAD_H / 2 + 5, '700 10px "Segoe UI", Arial, sans-serif', C.headerText, col.a);
+            });
+            cy += HEAD_H;
+
+            // ---- FILAS POR GRUPO ----
+            let rowIdx = 0;
+            Object.entries(byGroup).forEach(([grpName, grpRows]) => {
+                // Cabecera de grupo
+                ctx.fillStyle = C.groupBg;
+                ctx.fillRect(PAD, cy, INNER_W, GRPH);
+                // Borde izquierdo del grupo
+                ctx.fillStyle = C.groupBorder;
+                ctx.fillRect(PAD, cy, 3, GRPH);
+                // Línea superior
+                ctx.strokeStyle = C.groupBorder;
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.moveTo(PAD, cy); ctx.lineTo(PAD + INNER_W, cy); ctx.stroke();
+
+                text(grpName.toUpperCase(), PAD + 14, cy + GRPH / 2 + 5, '700 10.5px "Segoe UI", Arial, sans-serif', C.groupText, 'left');
+                const gCount = `${grpRows.length} tarea${grpRows.length !== 1 ? 's' : ''}`;
+                text(gCount, PAD + INNER_W - 12, cy + GRPH / 2 + 5, '500 10px "Segoe UI", Arial, sans-serif', C.groupText, 'right');
+                cy += GRPH;
+
+                grpRows.forEach((entry, i) => {
+                    const isCrit = entry.type === 'critical';
+                    const rowBg = isCrit ? C.critBg : (i % 2 === 0 ? C.bg : C.rowAlt);
+                    ctx.fillStyle = rowBg;
+                    ctx.fillRect(PAD, cy, INNER_W, ROW_H);
+
+                    // Borde inferior suave
+                    ctx.strokeStyle = C.borderLight;
+                    ctx.lineWidth = 0.5;
+                    ctx.beginPath(); ctx.moveTo(PAD, cy + ROW_H); ctx.lineTo(PAD + INNER_W, cy + ROW_H); ctx.stroke();
+
+                    // Indicador color lateral
+                    ctx.fillStyle = isCrit ? C.critBar : C.lagBar;
+                    ctx.fillRect(PAD, cy, 3, ROW_H);
+
+                    const midY = cy + ROW_H / 2;
+
+                    // TAREA (col 0)
+                    text(entry.tarea.nombre, PAD + 8 + 4, midY + 4, '500 11px "Segoe UI", Arial, sans-serif', C.cellText, 'left', COLS[0].w - 16);
+
+                    // GRUPO (col 1) — omitir si hay un solo grupo
+                    if (groupCount > 1) {
+                        text(grpName, PAD + COLS[1].x + 6, midY + 4, '400 10px "Segoe UI", Arial, sans-serif', C.mutedText, 'left', COLS[1].w - 10);
+                    }
+
+                    // ID (col 2)
+                    text(entry.tarea.id, PAD + COLS[2].x + COLS[2].w/2, midY + 4, '400 10px "Courier New", monospace', C.mutedText, 'center');
+
+                    // INICIO (col 3)
+                    text(entry.tarea.inicio, PAD + COLS[3].x + COLS[3].w/2, midY + 4, '400 10px "Segoe UI", Arial, sans-serif', C.mutedText, 'center');
+
+                    // FIN (col 4)
+                    text(entry.tarea.fin, PAD + COLS[4].x + COLS[4].w/2, midY + 4, '400 10px "Segoe UI", Arial, sans-serif', C.mutedText, 'center');
+
+                    // REAL (col 5) — con mini barra debajo
+                    const realPct  = Math.min(100, Math.max(0, entry.real));
+                    const planPct  = Math.min(100, Math.max(0, entry.plan));
+                    const barColor = isCrit ? C.critBar : C.lagBar;
+                    const bx = PAD + COLS[5].x + (COLS[5].w - BAR_W) / 2;
+
+                    text(realPct + '%', PAD + COLS[5].x + COLS[5].w/2, midY, '700 11px "Segoe UI", Arial, sans-serif', isCrit ? C.critText : C.lagText, 'center');
+                    progressBar(bx, midY + 4, BAR_W, BAR_H, realPct, barColor, C.planBar);
+
+                    // PLAN (col 6)
+                    text(planPct.toFixed(0) + '%', PAD + COLS[6].x + COLS[6].w/2, midY, '400 11px "Segoe UI", Arial, sans-serif', C.mutedText, 'center');
+                    progressBar(bx + (COLS[6].x - COLS[5].x), midY + 4, BAR_W, BAR_H, planPct, C.planBar, C.borderLight);
+
+                    // BRECHA (col 7)
+                    const gap = planPct - realPct;
+                    const gapColor = gap > 15 ? C.critText : C.lagText;
+                    text(gap.toFixed(0) + ' pp', PAD + COLS[7].x + COLS[7].w/2, midY + 4, '600 10.5px "Segoe UI", Arial, sans-serif', gapColor, 'center');
+
+                    // ESTADO — badge (col 8)
+                    const badgeBg   = isCrit ? C.critBadge : C.lagBadge;
+                    const badgeFg   = isCrit ? C.critText  : C.lagText;
+                    const badgeLabel = isCrit
+                        ? (entry.desfase > 0 ? `CRÍTICO  ${entry.desfase}d` : 'CRÍTICO')
+                        : (entry.desfase > 0 ? `DESFASE  ${entry.desfase}d` : 'DESFASE');
+                    const bw = 96, bh = 18;
+                    const badgeX = PAD + COLS[8].x + (COLS[8].w - bw) / 2;
+                    const badgeY = midY - bh / 2;
+                    badge(badgeX, badgeY, bw, bh, badgeLabel, badgeBg, badgeFg);
+
+                    cy += ROW_H;
+                    rowIdx++;
+                });
+            });
+
+            // ---- PIE ----
+            ctx.fillStyle = C.footBg;
+            ctx.fillRect(PAD, cy, INNER_W, FOOT_H);
+            ctx.strokeStyle = C.border;
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(PAD, cy); ctx.lineTo(PAD + INNER_W, cy); ctx.stroke();
+
+            text('pp = puntos porcentuales de brecha entre avance planificado y real', PAD + 14, cy + FOOT_H / 2 + 4, '400 9.5px "Segoe UI", Arial, sans-serif', C.footText, 'left');
+            text('Generado desde Panel de Control de Proyecto', PAD + INNER_W - 12, cy + FOOT_H / 2 + 4, '400 9.5px "Segoe UI", Arial, sans-serif', C.footText, 'right');
+
+            // ---- BORDE EXTERIOR ----
+            ctx.strokeStyle = C.border;
+            ctx.lineWidth = 1;
+            ctx.strokeRect(PAD, PAD, INNER_W, totalH - PAD * 2);
+
+            // ---- COPIAR AL PORTAPAPELES ----
+            try {
+                canvas.toBlob(async (blob) => {
+                    try {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                        showToast('✅ Imagen copiada al portapapeles');
+                    } catch (err) {
+                        // Fallback: descargar la imagen si el portapapeles falla
+                        const a = document.createElement('a');
+                        a.href = canvas.toDataURL('image/png');
+                        a.download = `desfases_${(projectData.nombreProyecto || 'proyecto').replace(/\s+/g, '_')}_${cutoffDate || 'corte'}.png`;
+                        a.click();
+                        showToast('⬇️ Portapapeles no disponible — imagen descargada', '#d97706');
+                    }
+                    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Copiar imagen de desfases';
+                    btn.disabled = false;
+                }, 'image/png');
+            } catch(e) {
+                showToast('Error generando imagen.', '#ef4444');
+                btn.textContent = 'Copiar imagen de desfases';
+                btn.disabled = false;
+            }
+        }
+
+        // Escuchar si la ventana padre envía datos después de abrirse
+        window.addEventListener('load', () => {
+            if (window.opener) {
+                window.opener.postMessage({ type: 'ANALISIS_READY' }, '*');
+            }
+            // Registrar botón copiar imagen via listener (más robusto que onclick inline)
+            const btn = document.getElementById('btnCopyImg');
+            if (btn) btn.addEventListener('click', copyLagTableAsImage);
+        });
+    </script>
+</body>
+</html>
