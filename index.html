@@ -112,6 +112,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="4" x2="8" y2="9"/><line x1="7" y1="13" x2="15" y2="13"/><line x1="7" y1="17" x2="12" y2="17"/></svg>
                         Ver Gantt
                     </button>
+                    <button onclick="openAnalysisWindow()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]" title="Análisis de tareas terminadas y con desfase">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        Análisis
+                    </button>
                     <button onclick="generateReport()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 text-sm h-[38px]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                         PDF
@@ -1062,6 +1066,40 @@
         }
 
         let ganttWindow = null;
+        let analysisWindow = null;
+
+        function openAnalysisWindow() {
+            const txtToSend = generateTxtString() || rawTxtContent;
+            if (!txtToSend || projectData.grupos.length === 0) {
+                showStatus('Primero cargue un archivo .txt con tareas.', 'error');
+                return;
+            }
+            if (analysisWindow && !analysisWindow.closed) {
+                analysisWindow.focus();
+                setTimeout(() => analysisWindow.postMessage({ type: 'LOAD_TXT', content: txtToSend }, '*'), 200);
+            } else {
+                analysisWindow = window.open('analisis_tareas.html', 'AnalysisWindow', 'width=1100,height=800,resizable=yes,scrollbars=yes');
+                // Escuchar cuando la ventana de análisis esté lista
+                const onReady = (e) => {
+                    if (e.data && e.data.type === 'ANALISIS_READY') {
+                        analysisWindow.postMessage({ type: 'LOAD_TXT', content: txtToSend }, '*');
+                        window.removeEventListener('message', onReady);
+                    }
+                };
+                window.addEventListener('message', onReady);
+                // Fallback por si el evento llega antes
+                const sendWhenReady = setInterval(() => {
+                    if (analysisWindow && !analysisWindow.closed) {
+                        try {
+                            analysisWindow.postMessage({ type: 'LOAD_TXT', content: txtToSend }, '*');
+                            clearInterval(sendWhenReady);
+                        } catch(e) { /* ventana aún no lista */ }
+                    } else {
+                        clearInterval(sendWhenReady);
+                    }
+                }, 400);
+            }
+        }
 
         function openGanttWindow() {
             const txtToSend = generateTxtString() || rawTxtContent;
