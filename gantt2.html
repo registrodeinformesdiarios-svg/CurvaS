@@ -308,6 +308,13 @@
                         <option value="monthly">Vista Mensual</option>
                         <option value="daily">Vista Diaria</option>
                     </select>
+                    <div id="zoom-control" class="hidden items-center gap-2 bg-slate-100 rounded-xl px-3 py-1.5">
+                        <svg class="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                        <input type="range" id="zoomSlider" min="40" max="300" value="120" step="10"
+                            class="w-24 accent-indigo-600 cursor-pointer"
+                            oninput="onZoomChange(this.value)">
+                        <span id="zoomLabel" class="text-[10px] font-bold text-slate-600 w-8 text-right">120</span>
+                    </div>
                     <label class="cursor-pointer bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all text-xs font-bold shadow-md flex items-center gap-2">
                         SUBIR ARCHIVO
                         <input type="file" id="fileInput" class="hidden" accept=".txt">
@@ -364,6 +371,7 @@
         let isCursorActive = false;
         let blockCounter = 0;
         let inspectionHistory = []; // Almacena {id, date}
+        let currentZoom = 120; // px por columna
         const tooltip = document.getElementById('gantt-tooltip');
 
         const CHILD_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#a855f7'];
@@ -382,6 +390,16 @@
 
         document.getElementById('scaleSelector').addEventListener('change', (e) => {
             currentScale = e.target.value;
+            // Defaults sensatos por vista
+            const defaultZoom = currentScale === 'daily' ? 40 : 120;
+            currentZoom = defaultZoom;
+            const slider = document.getElementById('zoomSlider');
+            if (slider) {
+                slider.min = currentScale === 'daily' ? 15 : 40;
+                slider.max = currentScale === 'daily' ? 120 : 300;
+                slider.value = defaultZoom;
+                document.getElementById('zoomLabel').innerText = defaultZoom;
+            }
             if (currentData) renderGantt();
         });
 
@@ -542,7 +560,7 @@
             const toggleBtn = document.getElementById('toggleCursorBtn');
             const inspectLine = document.getElementById('inspect-line');
             const fixedLinesContainer = document.getElementById('fixed-lines-container');
-            const cellWidth = currentScale === 'daily' ? 40 : 120;
+            const cellWidth = currentScale === 'daily' ? currentZoom : currentZoom;
 
             if (!currentData || !currentData.start) return;
 
@@ -557,6 +575,8 @@
             component.classList.remove('hidden');
             inspectArea.classList.remove('hidden');
             toggleBtn.classList.remove('hidden');
+            document.getElementById('zoom-control').classList.remove('hidden');
+            document.getElementById('zoom-control').classList.add('flex');
 
             chart.innerHTML = '';
             chart.appendChild(inspectLine);
@@ -817,6 +837,12 @@
             };
         }
 
+        function onZoomChange(value) {
+            currentZoom = parseInt(value);
+            document.getElementById('zoomLabel').innerText = value;
+            if (currentData) renderGantt();
+        }
+
         function varRowHeight() {
             return parseInt(getComputedStyle(document.documentElement).getPropertyValue('--row-height')) || 50;
         }
@@ -877,7 +903,7 @@
             const input = document.getElementById('manualDateInput');
             if (!input || !input.value || !currentData) return;
             const date = parseCleanDate(input.value);
-            const x = getLeftPos(date, currentData.start, currentScale === 'daily' ? 40 : 120);
+            const x = getLeftPos(date, currentData.start, currentZoom);
             addInspectionBlock(date, x);
         }
 
