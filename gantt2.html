@@ -44,15 +44,16 @@
         }
 
         .sidebar-row {
-            height: var(--row-height);
+            min-height: var(--row-height);
             display: flex;
             align-items: center;
-            padding: 0 0.75rem;
+            padding: 0.25rem 0.75rem;
             border-bottom: 1px solid #f1f5f9;
             font-size: 0.75rem;
             font-weight: 600;
             color: #1e293b;
-            overflow: hidden;
+            overflow: visible;
+            flex-wrap: wrap;
         }
 
         .gantt-viewport {
@@ -260,9 +261,23 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        .today-block {
-            border: 2px solid #10b981;
-            background: #f0fdf4;
+        .pinned-task-block {
+            min-width: 260px;
+            max-width: 260px;
+            background: white;
+            border: 2px solid #6366f1;
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 16px -2px rgba(99,102,241,0.2);
+            animation: popIn 0.15s ease-out;
+            flex-shrink: 0;
+        }
+
+        .task-segment.pinned {
+            outline: 3px solid white;
+            box-shadow: 0 0 0 4px #6366f1, 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 25 !important;
         }
 
         #gantt-tooltip {
@@ -278,6 +293,46 @@
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
             max-width: 280px;
             border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .pinned-tooltip {
+            position: absolute;
+            z-index: 999;
+            background: #1e293b;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 11px;
+            pointer-events: auto;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+            max-width: 280px;
+            border: 2px solid #6366f1;
+            animation: popIn 0.15s ease-out;
+            cursor: default;
+        }
+
+        .pinned-tooltip-close {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 16px;
+            height: 16px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 9px;
+            line-height: 1;
+            color: rgba(255,255,255,0.7);
+            transition: background 0.15s;
+        }
+        .pinned-tooltip-close:hover { background: #ef4444; color: white; }
+
+        @keyframes popIn {
+            from { transform: scale(0.95); opacity: 0; }
+            to   { transform: scale(1);    opacity: 1; }
         }
     </style>
 </head>
@@ -337,6 +392,18 @@
                 <div id="today-inspection-block" class="inspection-block today-block sticky left-0 z-10 shrink-0"></div>
                 <div class="w-px bg-slate-200 self-stretch my-2"></div>
                 <div id="inspection-list-container" class="flex gap-4"></div>
+            </div>
+
+            <!-- Tareas fijadas por doble clic -->
+            <div id="pinned-tasks-area" class="hidden">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-black text-indigo-700 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                        Tareas Fijadas
+                    </h3>
+                    <button onclick="clearPinnedTasks()" class="text-[10px] font-bold text-slate-400 hover:text-red-500 transition-colors">LIMPIAR TODO</button>
+                </div>
+                <div id="pinned-tasks-container" class="flex gap-4 overflow-x-auto pb-2"></div>
             </div>
         </div>
 
@@ -584,6 +651,9 @@
             fixedLinesContainer.innerHTML = ''; 
             sidebar.innerHTML = '';
 
+            // Limpiar pines al re-renderizar (los segmentos se recrean)
+            if (typeof clearPinnedTasks === 'function') clearPinnedTasks();
+
             const header = document.createElement('div');
             header.className = 'gantt-header';
             let headersData = [];
@@ -702,13 +772,13 @@
 
                 const sRow = document.createElement('div');
                 sRow.className = 'sidebar-row';
-                sRow.style.height = rowH + 'px';
-                sRow.innerHTML = `<span class="task-id">${madre.id}</span><span class="truncate" title="${madre.nombre}">${madre.nombre}</span>`;
+                sRow.style.minHeight = rowH + 'px';
+                sRow.innerHTML = `<span class="task-id">${madre.id}</span><span class="break-words leading-tight">${madre.nombre}</span>`;
                 sidebar.appendChild(sRow);
 
                 const gRow = document.createElement('div');
                 gRow.className = 'gantt-row';
-                gRow.style.height = rowH + 'px';
+                gRow.style.minHeight = rowH + 'px';
                 headersData.forEach(h => {
                     const c = document.createElement('div');
                     c.className = 'gantt-cell';
@@ -787,6 +857,11 @@
                             };
                             segment.onmouseleave = () => tooltip.style.display = 'none';
 
+                            segment.ondblclick = (e) => {
+                                e.stopPropagation();
+                                pinTooltip(hija, madre, segment, e.clientX, e.clientY);
+                            };
+
                             barContainer.appendChild(segment);
                         });
                     });
@@ -834,6 +909,150 @@
                     targetDate.setDate(dayInMonth);
                 }
                 addInspectionBlock(targetDate, x);
+            };
+
+            // Sincronizar alturas: sidebar dicta, gantt iguala
+            requestAnimationFrame(() => {
+                const sRows = sidebar.querySelectorAll('.sidebar-row');
+                const gRows = chart.querySelectorAll('.gantt-row');
+                sRows.forEach((sRow, i) => {
+                    const h = sRow.getBoundingClientRect().height;
+                    sRow.style.height = h + 'px';
+                    if (gRows[i]) gRows[i].style.height = h + 'px';
+                });
+            });
+        }
+
+        // --- Tooltips anclados por doble clic ---
+        const pinnedTasks = new Map(); // key: hija.id → { el, card, segment }
+
+        function pinTooltip(hija, madre, segment, clientX, clientY) {
+            const key = hija.id;
+
+            // Si ya está anclado, desanclar
+            if (pinnedTasks.has(key)) { unpinTask(key); return; }
+
+            segment.classList.add('pinned');
+
+            // 1) Tooltip flotante anclado — position:absolute en el documento
+            const tooltipHTML = document.getElementById('gantt-tooltip').innerHTML;
+            const el = document.createElement('div');
+            el.className = 'pinned-tooltip';
+            const pageX = clientX + window.scrollX;
+            const pageY = clientY + window.scrollY;
+            el.style.left = (pageX + 15) + 'px';
+            el.style.top  = (pageY + 15) + 'px';
+            el.innerHTML = tooltipHTML;
+
+            const closeBtn = document.createElement('div');
+            closeBtn.className = 'pinned-tooltip-close';
+            closeBtn.innerHTML = '✕';
+            closeBtn.onclick = () => unpinTask(key);
+            el.appendChild(closeBtn);
+
+            makeDraggable(el);
+            document.body.appendChild(el);
+
+            // Evitar que se salga del viewport al aparecer
+            requestAnimationFrame(() => {
+                const r = el.getBoundingClientRect();
+                if (r.right  > window.innerWidth)  el.style.left = (window.scrollX + window.innerWidth  - r.width  - 10) + 'px';
+                if (r.bottom > window.innerHeight) el.style.top  = (window.scrollY + window.innerHeight - r.height - 10) + 'px';
+            });
+
+            // 2) Tarjeta en la sección "Tareas Fijadas"
+            const area = document.getElementById('pinned-tasks-area');
+            const container = document.getElementById('pinned-tasks-container');
+            const color = segment.style.backgroundColor || '#6366f1';
+            const dS = parseCleanDate(hija.inicio);
+            const dE = parseCleanDate(hija.fin);
+            const durDays = dS && dE ? Math.round((dE - dS) / 86400000) + 1 : '–';
+
+            const card = document.createElement('div');
+            card.className = 'pinned-task-block';
+            card.id = `pinned-${key}`;
+            card.innerHTML = `
+                <div class="p-3 border-b border-slate-100 flex justify-between items-start rounded-t-2xl" style="background:${color}18">
+                    <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style="background:${color}">
+                            <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                        </div>
+                        <div>
+                            <div class="text-[8px] font-black uppercase tracking-widest" style="color:${color}">FIJADA</div>
+                            <div class="text-[10px] font-black text-slate-800 leading-tight">${hija.nombre}</div>
+                        </div>
+                    </div>
+                    <button onclick="unpinTask('${key}')" class="text-slate-300 hover:text-red-500 ml-1 flex-shrink-0">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" stroke-width="2.5"/></svg>
+                    </button>
+                </div>
+                <div class="p-3 space-y-2">
+                    <div class="text-[9px] text-slate-500 font-bold truncate">${madre.nombre}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="bg-slate-50 rounded-lg p-1.5">
+                            <div class="text-[7px] uppercase text-indigo-500 font-bold">Inicio</div>
+                            <div class="text-[9px] font-mono font-bold text-slate-800">${hija.inicio}</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-1.5">
+                            <div class="text-[7px] uppercase text-emerald-500 font-bold">Fin</div>
+                            <div class="text-[9px] font-mono font-bold text-slate-800">${hija.fin}</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-[9px] text-slate-400">${durDays} días</span>
+                        <span class="text-sm font-black" style="color:${color}">${hija.progreso}%</span>
+                    </div>
+                    <div class="relative h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div class="absolute left-0 top-0 h-full rounded-full" style="width:${hija.progreso}%;background:${color}"></div>
+                    </div>
+                </div>`;
+
+            container.appendChild(card);
+            area.classList.remove('hidden');
+
+            pinnedTasks.set(key, { el, card, segment });
+        }
+
+        function unpinTask(key) {
+            const entry = pinnedTasks.get(key);
+            if (!entry) return;
+            entry.el.remove();
+            entry.card.remove();
+            entry.segment.classList.remove('pinned');
+            pinnedTasks.delete(key);
+            if (pinnedTasks.size === 0) document.getElementById('pinned-tasks-area').classList.add('hidden');
+        }
+
+        function clearPinnedTasks() {
+            pinnedTasks.forEach(entry => {
+                entry.el.remove();
+                entry.card.remove();
+                entry.segment.classList.remove('pinned');
+            });
+            pinnedTasks.clear();
+            document.getElementById('pinned-tasks-area').classList.add('hidden');
+        }
+
+        function makeDraggable(el) {
+            let startX, startY, startLeft, startTop;
+            el.style.cursor = 'grab';
+            el.onmousedown = (e) => {
+                if (e.target.classList.contains('pinned-tooltip-close')) return;
+                e.preventDefault();
+                startX    = e.clientX;
+                startY    = e.clientY;
+                startLeft = parseInt(el.style.left) || 0;
+                startTop  = parseInt(el.style.top)  || 0;
+                el.style.cursor = 'grabbing';
+                document.onmousemove = (e2) => {
+                    el.style.left = (startLeft + e2.clientX - startX) + 'px';
+                    el.style.top  = (startTop  + e2.clientY - startY) + 'px';
+                };
+                document.onmouseup = () => {
+                    document.onmousemove = null;
+                    document.onmouseup   = null;
+                    el.style.cursor = 'grab';
+                };
             };
         }
 
