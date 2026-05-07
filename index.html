@@ -629,11 +629,9 @@
             btn.disabled = true;
             btn.innerHTML = '<div class="loading-spinner"></div> Creando...';
             try {
-                const res = await fetch(getApiUrl(), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'create_project', name })
-                });
+                // GET evita el preflight CORS que bloquea Apps Script
+                const url = `${getApiUrl()}?action=create_project&name=${encodeURIComponent(name)}`;
+                const res = await fetch(url);
                 const data = await res.json();
                 if (data.status === 'success') {
                     showStatus(`Proyecto "${name}" creado correctamente.`);
